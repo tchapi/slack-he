@@ -1,0 +1,19 @@
+{
+  "name": "slack-he",
+  "version": "1.0.0",
+  "description": "Slack History Extended",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "slack",
+    "history",
+    "limit"
+  ],
+  "author": "tchap",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.13.4"
+  }
+}
