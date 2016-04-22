@@ -1,0 +1,6 @@
+{
+  "port" : 3975,
+  "api_token" : "12345678",
+  "payload_token" : "MySeCrEtHaSh",
+  "domain" : "my-domain"
+}
