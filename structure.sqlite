@@ -1,0 +1,2 @@
+CREATE TABLE data (id INTEGER PRIMARY KEY, message TEXT, poster VARCHAR(255), timestamp INTEGER, channel TEXT);
+CREATE VIRTUAL TABLE dataFTS USING fts4(content="data", message, poster);
