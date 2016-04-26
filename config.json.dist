@@ -1,6 +1,14 @@
 {
   "port" : 3975,
-  "api_token" : "12345678",
-  "payload_token" : "MySeCrEtHaSh",
-  "domain" : "my-domain"
+  "slack" : {
+    "api_token" : "test",
+    "payload_token" : "token",
+    "command_token" : "token2",
+    "command_command" : "/stats",
+    "domain" : "domain"
+  },
+  "db": {
+    "path" : "db.sqlite"
+  }
+
 }
