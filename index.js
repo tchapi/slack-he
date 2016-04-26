@@ -37,7 +37,7 @@ app.get('/',function(req,res) {
     if (req.query.token != config.get('slack').payload_token) {
 
         console.log("Bad token :", req.query.token)
-        //res.render('unauthorized.html')
+        res.status(403).end()
 
     } else {
 
