@@ -4,8 +4,14 @@
     "api_token" : "test",
     "payload_token" : "token",
     "command_token" : "token2",
-    "command_command" : "/stats",
-    "domain" : "domain"
+    "command_endpoint" : "/command",
+    "command_search_command" : "/search",
+    "command_stats_command" : "/stats",
+    "domain" : "domain",
+    "search" : {
+      "limit": 5,
+      "color": "#36a64f"
+    }
   },
   "db": {
     "path" : "db.sqlite"

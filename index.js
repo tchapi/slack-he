@@ -1,6 +1,7 @@
 var express = require('express')
 var bodyParser = require('body-parser')
 var nunjucks = require('nunjucks')
+
 var Slack = require('node-slack')
 
 var app = express()
@@ -28,10 +29,22 @@ nunjucks.configure('views', {
     express: app
 })
 
+// A pad helper
+// Taken from http://stackoverflow.com/a/24398129/1741150
+function pad(pad, str, padLeft) {
+  if (typeof str === 'undefined') 
+    return pad;
+  if (padLeft) {
+    return (pad + str).slice(-pad.length);
+  } else {
+    return (str + pad).substring(0, pad.length);
+  }
+}
+
 // And finally Slack config
 var slack = new Slack(config.get('slack').domain,config.get('slack').api_token)
 
-// This is the admin / dashboard interface endpoint
+// This is the full history endpoint
 app.get('/',function(req,res) {
 
     if (req.query.token != config.get('slack').payload_token) {
@@ -41,11 +54,34 @@ app.get('/',function(req,res) {
 
     } else {
 
-        // TODO
-        //res.render('dashboard.html')
+        // TODO retrieve stats
+
+        // Display them
+        res.render('history.html')
     }
 
 })
+
+// This is the search results endpoint
+app.get('/search/:channel/:terms',function(req,res) {
+
+    if (req.query.token != config.get('slack').payload_token) {
+
+        console.log("Bad token :", req.query.token)
+        res.status(403).end()
+
+    } else {
+
+        // Saerch
+        db.search(req.params.terms, req.params.channel, null, function(results) {
+
+          // Display them
+          res.render('search.html', { "terms": req.params.terms, "results": results })
+        })
+    }
+
+})
+
 
 /* That is the endpoint Slack posts to 
    for all incoming messages
@@ -76,14 +112,15 @@ app.post('/',function(req,res) {
 
         res.status(204).end() // No-Content
 
-    } else if (req.body.text.substr(0,config.get('slack').command_command.length) == config.get('slack').command_command) { // We don't want to store commands
+    } else if (req.body.text.substr(0,config.get('slack').command_search_command.length) == config.get('slack').command_search_command &&
+               req.body.text.substr(0,config.get('slack').command_stats_command.length) == config.get('slack').command_stats_command ) { // We don't want to store commands
 
         res.status(204).end() // No-Content
 
     } else {
 
         // Store message, and that's all
-        db.insertMessage(req.body.user_name, Math.floor(req.body.ttimestamp), req.body.text, req.body.channel_name)
+        db.insertMessage(req.body.user_name, Date.now(), req.body.text, req.body.channel_name)
         res.status(200).end() // OK
 
     }
@@ -91,7 +128,7 @@ app.post('/',function(req,res) {
 
 /* That is the command endpoint
 */
-app.post(config.get('slack').command_command,function(req,res) {
+app.post(config.get('slack').command_endpoint,function(req,res) {
 
     /*
 
@@ -117,17 +154,81 @@ app.post(config.get('slack').command_command,function(req,res) {
 
         res.status(204).end() // No-Content
 
-    } else if (req.body.command == config.get('slack').command_command){
+    } else if (req.body.command == config.get('slack').command_search_command){
+
+        var search_text = req.body.text
+        var channel = req.body.channel_name
+
+        // We need to search
+        db.search(search_text, channel, null, function(results) {
+
+          // We format the results
+          /*
+            {
+              "text": "🔎 Your search results for 'test' :",
+              "attachments": [
+                  {
+                      "fallback": "Required plain-text summary of the attachment.",
+                      "color": "#36a64f",
+                      "author_name": "Bobby Tables @ 24 jan. 2016 20:35",
+                      "author_icon": "http://image.url/",
+                      "text": "Optional text that appears within the attachment"
+                  } 
+                ]
+            }
+          */
+
+          var max_results = config.get('slack').search.limit
+          var color = config.get('slack').search.color
+          
+          var h_array = search_text.split(' ');
+          var url = config.get('host') + "/search/" + channel + "/" + encodeURIComponent(search_text) + "?token=" + config.get('slack').payload_token
+          var response = { "text": "🔎 Top " + Math.min(results.length, max_results) + " results for '" + search_text + "'" + (max_results<results.length?" (<"+ url +"|see all>)":"") + " :", "attachments": [] }
+
+          for (var i = 0; i < Math.min(results.length, max_results); i++) {
+
+            var h_text = results[i].message;
+            for (var j = 0; j < h_array.length; j++) {
+              h_text = h_text.replace(h_array[j], "`" + h_array[j] + "`");
+            }
+
+            response["attachments"].push({
+                      "fallback": results[i].poster + " : " + h_text,
+                      "color": color,
+                      "author_name": results[i].poster + " @ " + new Date(results[i].timestamp).toLocaleString(),
+                      "text": h_text,
+                      "mrkdwn_in": ["text", "author_name"]
+                  });
+          }
+
+          res.json(response).end() // OK
+        })
+
+    } else if (req.body.command == config.get('slack').command_stats_command){
 
         var args = req.body.text
         var channel = req.body.channel_name
-        var poster = req.body.user_name
 
         // We need to output stats ;)
+        db.stat(args, channel, function(results) {
 
-        /* TODO TODO TODO TODO TODO */
+          var text = "```| User              | Most common word                  | Messages total     |\n";
+             text += "------------------------------------------------------------------------------\n";
 
-        res.status(200).end() // OK
+          var padding_user = Array(18).join(' ')
+          var padding_word = Array(34).join(' ')
+          var padding_count = Array(19).join(' ')
+
+          for (var p in results) {
+            text += "| " + pad(padding_user, p) + " | " + pad(padding_word, results[p].word + " (" + results[p].word_count + " occurences)") + " | " + pad(padding_count, results[p].total + " (" + parseInt(results[p].average) + "/d.avg)") + " |\n";
+          }
+          
+          text += "------------------------------------------------------------------------------```";
+
+          res.json({ "text": text}).end() // OK
+        
+        })
+
     } else {
 
         console.log("Bad command :", req.body.command)

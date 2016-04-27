@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+Search results for "{{ terms }}"
+
+<ul>
+  {% for result in results %}
+  <li>
+    <div>{{ result.poster }} @ {{ result.timestamp }}</div>
+    <div>{{ result.message}} </div>
+
+
+  </li>
+  {% endfor %}
+</ul>
+{% endblock %}
