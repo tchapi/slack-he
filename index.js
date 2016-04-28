@@ -7,6 +7,10 @@ var Slack = require('node-slack')
 
 var app = express()
 
+// Add string helper module
+var StringHelper = require('./services/StringHelper')
+var _str = new StringHelper()
+
 // Add config module
 var CONFIG = require('./services/ConfigParser')
 var config = new CONFIG()
@@ -32,25 +36,13 @@ var env = nunjucks.configure('views', {
 nunjucksDate.setDefaultFormat('MMMM Do YYYY, hh:mm:ss');
 nunjucksDate.install(env);
 
-// A pad helper
-// Taken from http://stackoverflow.com/a/24398129/1741150
-function pad(pad, str, padLeft) {
-  if (typeof str === 'undefined') 
-    return pad;
-  if (padLeft) {
-    return (pad + str).slice(-pad.length);
-  } else {
-    return (str + pad).substring(0, pad.length);
-  }
-}
-
 // And finally Slack config
 var slack = new Slack(config.get('slack').domain,config.get('slack').api_token)
 
 // This is the full history endpoint
 app.get('/:channel',function(req,res) {
 
-    if (req.query.token != config.get('slack').payload_token) {
+    if (req.query.token != config.get('slack').pages_token) {
 
         console.log("Bad token :", req.query.token)
         res.status(403).end()
@@ -68,7 +60,7 @@ app.get('/:channel',function(req,res) {
 // This is the search results endpoint
 app.get('/search/:channel/:terms',function(req,res) {
 
-    if (req.query.token != config.get('slack').payload_token) {
+    if (req.query.token != config.get('slack').pages_token) {
 
         console.log("Bad token :", req.query.token)
         res.status(403).end()
@@ -77,6 +69,11 @@ app.get('/search/:channel/:terms',function(req,res) {
 
         // Search
         db.search(req.params.terms, req.params.channel, null, function(results) {
+
+          var words_array = req.params.terms.split(' ');
+          for (var i = 0; i < results.length; i++) {
+            results[i].message = _str.highlight(results[i].message, words_array)
+          }
           res.render('search.html', { "channel": req.params.channel, "terms": req.params.terms, "results": results })
         })
     }
@@ -182,16 +179,13 @@ app.post(config.get('slack').command_endpoint,function(req,res) {
           var max_results = config.get('slack').search.limit
           var color = config.get('slack').search.color
           
-          var h_array = search_text.split(' ');
+          var words_array = search_text.split(' ');
           var url = config.get('host') + "/search/" + channel + "/" + encodeURIComponent(search_text) + "?token=" + config.get('slack').payload_token
           var response = { "text": "🔎 Top " + Math.min(results.length, max_results) + " results for '" + search_text + "'" + (max_results<results.length?" (<"+ url +"|see all>)":"") + " :", "attachments": [] }
 
           for (var i = 0; i < Math.min(results.length, max_results); i++) {
 
-            var h_text = results[i].message;
-            for (var j = 0; j < h_array.length; j++) {
-              h_text = h_text.replace(h_array[j], "`" + h_array[j] + "`");
-            }
+            var h_text = _str.code(results[i].message, words_array)
 
             response["attachments"].push({
                       "fallback": results[i].poster + " : " + h_text,
@@ -207,21 +201,17 @@ app.post(config.get('slack').command_endpoint,function(req,res) {
 
     } else if (req.body.command == config.get('slack').command_stats_command){
 
-        var args = req.body.text
+        var poster = req.body.text
         var channel = req.body.channel_name
 
         // We need to output stats ;)
-        db.stat(args, channel, function(results) {
+        db.stat(poster, channel, function(results) {
 
           var text = "```| User              | Most common word                  | Messages total     |\n";
              text += "------------------------------------------------------------------------------\n";
 
-          var padding_user = Array(18).join(' ')
-          var padding_word = Array(34).join(' ')
-          var padding_count = Array(19).join(' ')
-
           for (var p in results) {
-            text += "| " + pad(padding_user, p) + " | " + pad(padding_word, results[p].word + " (" + results[p].word_count + " occurences)") + " | " + pad(padding_count, results[p].total + " (" + parseInt(results[p].average) + "/d.avg)") + " |\n";
+            text += "| " + _str.pad(' ', 18, p) + " | " + _str.pad(' ', 34, results[p].word + " (" + results[p].word_count + " occurences)") + " | " + _str.pad(' ', 19, results[p].total + " (" + parseInt(results[p].average) + "/d.avg)") + " |\n";
           }
           
           text += "------------------------------------------------------------------------------```";

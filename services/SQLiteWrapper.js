@@ -99,7 +99,7 @@ p.getMessages = function(channel, callback) {
 
 }
 
-p.stat = function(args, channel, callback) {
+p.stat = function(channel, callback) {
 
   var sql_total = "SELECT poster, AVG(msg_count) AS average, SUM(msg_count) AS total FROM (SELECT poster, timestamp, COUNT(*) AS msg_count FROM data WHERE channel = $channel GROUP BY timestamp/(1000*60*60*24), poster) a GROUP BY poster;"
   var sql_words = "SELECT * FROM (SELECT poster, word, COUNT(word) AS word_count FROM stats WHERE channel = $channel GROUP BY poster, word) a GROUP BY a.poster HAVING a.word_count = MAX(a.word_count);";

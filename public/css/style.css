@@ -206,3 +206,8 @@ ts-message .message_body {
 ts-message .message_body {
     cursor: text;
 }
+
+ts-message highlight {
+    background: #FFFF66;
+    padding: 0 4px;
+}

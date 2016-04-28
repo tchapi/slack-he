@@ -7,16 +7,11 @@
       <h2 id="channel_name_container" class="channel_name_container">
         <div id="active_channel_name_overlay" class="onboarding_overlay hidden"></div>
         <span id="channel_name" class="channel_name">
-            <span id="channel_title">#{{ channel }}</span></span>
+            <span id="channel_title">Search results for « {{ terms }} » in #{{ channel }}</span></span>
       </h2>
 
       <div id="channel_header_info">
-        <span id="channel_members_toggle_count" class="blue_hover ts_tip ts_tip_bottom ts_tip_leftish">Channel history</span>
-        <span class="topic_divider">&nbsp;|&nbsp;</span><span id="topic_inline_edit" class="channel_topic inline_edit inline_edit_editable">
-          <span class="inline_edit_inner">
-            <span id="channel_topic_text" class="inline_edit_input no_jumbomoji">From <span>{{ start_date|date }}</span> to <span>{{ end_date|date }}</span></span>
-          </span>
-        </span>
+        <span id="channel_members_toggle_count" class="blue_hover ts_tip ts_tip_bottom ts_tip_leftish">{{ results|length }} results</span>
       </div>
     </div>
   </div>
@@ -47,7 +42,7 @@
   </div>
 
 </ts-message>
-<hr>
+
 {% endfor %}
 
 {% endblock %}
