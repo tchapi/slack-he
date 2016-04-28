@@ -1,5 +1,58 @@
 {% extends "base.html" %}
 
 {% block content %}
-History
+
+<div class="channel_header">
+    <div class="messages_header"><div class="channel_title"> 
+      <h2 id="channel_name_container" class="channel_name_container">
+        <div id="active_channel_name_overlay" class="onboarding_overlay hidden"></div>
+        <span id="channel_name" class="channel_name">
+            <span id="channel_title">#{{ channel }}</span></span>
+      </h2>
+
+      <div id="channel_header_info">
+        <span id="channel_members_toggle_count" class="blue_hover ts_tip ts_tip_bottom ts_tip_leftish">Channel history</span>
+        <span class="topic_divider">&nbsp;|&nbsp;</span><span id="topic_inline_edit" class="channel_topic inline_edit inline_edit_editable">
+          <span class="inline_edit_inner">
+            <span id="channel_topic_text" class="inline_edit_input no_jumbomoji">From <span>{{ start_date|date }}</span> to <span>{{ end_date|date }}</span></span>
+          </span>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% for message in messages %}
+<ts-message id="message_{{ message.id }}" class="message feature_fix_files first">
+
+  <div class="message_gutter">
+
+    {% if poster != message.poster or message.timestamp > timestamp + 10*60*1000 %}
+    <div class="message_icon">
+      <a class=" member_preview_link member_image thumb_36" style="background-image: url('https://secure.gravatar.com/avatar/7e7d55f02a02b5a3c8448ba840f931be.jpg?s=48&amp;d=https%3A%2F%2Fa.slack-edge.com%2F66f9%2Fimg%2Favatars%2Fava_0012-48.png')"></a>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <div class="message_content ">
+
+    {% if poster != message.poster or message.timestamp > timestamp + 10*60*1000 %}
+    <a class="message_sender member member_preview_link color_U03FXRM6H color_e7392d ">{{ message.poster }}</a>
+
+    <a class="timestamp ts_tip ts_tip_top ts_tip_float ts_tip_multiline ts_tip_delay_300 ts_tip_hidden">
+      {{ message.timestamp|date("hh:mm:ss") }}
+      <span class="ts_tip_tip"><span class="ts_tip_multiline_inner">{{ message.timestamp|date }}</span></span>
+    </a>
+    {% endif %}
+
+    <span class="message_body">{{ message.message}}</span>
+
+  </div>
+
+</ts-message>
+{% set poster = message.poster %}
+{% set timestamp = message.timestamp %}
+{% endfor %}
+
 {% endblock %}

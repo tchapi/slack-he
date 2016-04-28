@@ -1,6 +1,7 @@
 var express = require('express')
 var bodyParser = require('body-parser')
 var nunjucks = require('nunjucks')
+var nunjucksDate = require('nunjucks-date');
 
 var Slack = require('node-slack')
 
@@ -24,10 +25,12 @@ app.use(bodyParser.json())
 app.use('/static', express.static(__dirname + '/public'))
 
 // templating 
-nunjucks.configure('views', {
+var env = nunjucks.configure('views', {
     autoescape: false,
     express: app
 })
+nunjucksDate.setDefaultFormat('MMMM Do YYYY, hh:mm:ss');
+nunjucksDate.install(env);
 
 // A pad helper
 // Taken from http://stackoverflow.com/a/24398129/1741150
@@ -45,7 +48,7 @@ function pad(pad, str, padLeft) {
 var slack = new Slack(config.get('slack').domain,config.get('slack').api_token)
 
 // This is the full history endpoint
-app.get('/',function(req,res) {
+app.get('/:channel',function(req,res) {
 
     if (req.query.token != config.get('slack').payload_token) {
 
@@ -54,10 +57,10 @@ app.get('/',function(req,res) {
 
     } else {
 
-        // TODO retrieve stats
-
-        // Display them
-        res.render('history.html')
+        // All messages
+        db.getMessages(req.params.channel, function(messages) {
+          res.render('history.html', { "channel": req.params.channel, "messages": messages, "start_date": Date.now(), "end_date": Date.now() })
+        })
     }
 
 })
@@ -72,11 +75,9 @@ app.get('/search/:channel/:terms',function(req,res) {
 
     } else {
 
-        // Saerch
+        // Search
         db.search(req.params.terms, req.params.channel, null, function(results) {
-
-          // Display them
-          res.render('search.html', { "terms": req.params.terms, "results": results })
+          res.render('search.html', { "channel": req.params.channel, "terms": req.params.terms, "results": results })
         })
     }
 

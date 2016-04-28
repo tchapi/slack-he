@@ -1,0 +1,208 @@
+* {
+    -ms-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Helvetica Neue",Helvetica,"Segoe UI",Tahoma,Arial,sans-serif;
+    -moz-osx-font-smoothing: grayscale;
+    font-variant-ligatures: common-ligatures;
+    height: 100%;
+    width: 100%;
+    min-width: 768px;
+    -webkit-font-smoothing: antialiased;
+    font-size: 1rem;
+    line-height: 1rem;
+    background: #fff;
+    color: #555459;
+    padding: 0;
+    margin: 0;
+    margin-top: 70px;
+}
+
+.channel_header {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -moz-flex;
+    display: -ms-flexbox;
+    display: flex;
+    padding: .7rem 0 0;
+    height: 60px;
+    position: fixed;
+    top: 0;
+    z-index: 25;
+    border-bottom: 1px solid #DDD;
+    background: white;
+    width: 100%
+}
+
+.channel_header .channel_title {
+    display: inline-block;
+    -ms-flex: 1 1 auto;
+    -webkit-flex: 1 1 auto;
+    flex: 1 1 auto;
+    margin-top: -2px;
+    min-width: 0;
+}
+.channel_header .channel_name_container {
+    display: block;
+    white-space: nowrap;
+    margin: 0 0 -2px;
+    line-height: 1.375rem;
+    color: #9e9ea6;
+    font-size: 1rem;
+    font-weight: 500;
+    -webkit-transition: .15s;
+    -moz-transition: .15s;
+    transition: .15s;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+#active_channel_name_overlay {
+    background-position: 0 .3rem;
+}
+#active_channel_name_overlay {
+    left: auto;
+    margin-left: 1.125rem;
+    width: 120px;
+}
+.channel_header .channel_name_container .channel_name {
+    display: inline-block;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    padding: 0 .1rem 0 1.3rem;
+    color: #2c2d30;
+    font-weight: 900;
+    font-size: 1.125rem;
+    line-height: 1.375rem;
+    z-index: 25;
+}
+.channel_header #channel_header_info {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -moz-flex;
+    display: -ms-flexbox;
+    display: flex;
+    margin-top: 3px;
+    padding-left: 1.3rem;
+    background: #fff;
+    color: #9e9ea6;
+    font-size: .8125rem;
+    font-weight: 400;
+    line-height: 1.16;
+}
+.channel_header #channel_header_info #channel_members_toggle_count {
+    -ms-flex: 0 0 auto;
+    -webkit-flex: 0 0 auto;
+    flex: 0 0 auto;
+    -webkit-transition: color .1s ease-out 0s;
+    -moz-transition: color .1s ease-out 0s;
+    transition: color .1s ease-out 0s;
+}
+
+
+
+ts-message {
+    display: block;
+    width: 100%;
+    margin: 0 auto -1px;
+    position: relative;
+    padding: 1px 2.5rem 2px 0;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+    color: #2c2d30;
+    font-size: .9375rem;
+    line-height: 1.375rem;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    word-wrap: break-word;
+}
+
+ts-message .message_gutter {
+    width: 72px;
+    padding-right: 10px;
+}
+ts-message .message_gutter {
+    text-align: right;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+ts-message.first:not(.in_channel_consecutive_reply) .message_icon, ts-message.selected:not(.in_channel_consecutive_reply) .message_icon {
+    margin-top: 4px;
+    display: block;
+}
+
+
+.member_image.thumb_36 {
+    width: 36px;
+    height: 36px;
+}
+a, a:link, a:visited {
+    color: #2a80b9;
+}
+a, a:link, a:visited {
+    color: #2a80b9;
+}
+.member_image {
+    border-radius: .2rem;
+    background-size: 100%;
+    background-repeat: no-repeat;
+    display: inline-block;
+    position: relative;
+}
+
+
+ts-message.first .message_content, ts-message.selected .message_content {
+    margin-top: 1px;
+}
+ts-message .message_content {
+    margin-left: 72px;
+}
+
+ts-message.first .message_content .bot_label, ts-message.first .message_content .message_sender, ts-message.selected .message_content .bot_label, ts-message.selected .message_content .message_sender {
+    display: inline;
+}
+ts-message .message_content .member {
+    font-weight: 900;
+    color: #2c2d30!important;
+    line-height: 1.125rem;
+}
+ts-message .message_content>.message_sender {
+    margin-right: .25rem;
+}
+
+ts-message.first .message_content .timestamp, ts-message.selected .message_content .timestamp {
+    margin-right: .25rem;
+    opacity: 1;
+    display: inline;
+}
+ts-message .message_content .timestamp {
+    display: none;
+}
+ts-message .timestamp {
+    line-height: 1.125rem;
+    color: #9e9ea6;
+    font-size: .75rem;
+}
+
+ts-message.first .message_body, ts-message.selected .message_body {
+    margin-top: -2px;
+}
+ts-message .message_body {
+    display: block;
+}
+ts-message .message_body {
+    cursor: text;
+}

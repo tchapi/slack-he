@@ -18,6 +18,7 @@
     "express": "^4.13.4",
     "node-slack": "0.0.7",
     "nunjucks": "^2.4.2",
+    "nunjucks-date": "^1.2.0",
     "sqlite3": "^3.1.3"
   }
 }

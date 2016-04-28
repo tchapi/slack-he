@@ -83,6 +83,22 @@ p.search = function(text, channel, poster, callback) {
 
 }
 
+p.getMessages = function(channel, callback) {
+
+  var sql = "SELECT * FROM data WHERE channel = $channel"
+  var params = { $channel: channel };
+
+  this.db.serialize((function() {
+
+    var results = [];
+    this.db.all(sql, params, function(err, rows) {
+      callback(rows)
+    });
+
+  }).bind(this));
+
+}
+
 p.stat = function(args, channel, callback) {
 
   var sql_total = "SELECT poster, AVG(msg_count) AS average, SUM(msg_count) AS total FROM (SELECT poster, timestamp, COUNT(*) AS msg_count FROM data WHERE channel = $channel GROUP BY timestamp/(1000*60*60*24), poster) a GROUP BY poster;"
