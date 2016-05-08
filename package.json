@@ -19,6 +19,7 @@
     "node-slack": "0.0.7",
     "nunjucks": "^2.4.2",
     "nunjucks-date": "^1.2.0",
+    "request": "^2.72.0",
     "sqlite3": "^3.1.3"
   }
 }

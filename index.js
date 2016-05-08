@@ -3,7 +3,7 @@ var bodyParser = require('body-parser')
 var nunjucks = require('nunjucks')
 var nunjucksDate = require('nunjucks-date');
 
-var Slack = require('node-slack')
+var request = require('request')
 
 var app = express()
 
@@ -36,8 +36,19 @@ var env = nunjucks.configure('views', {
 nunjucksDate.setDefaultFormat('MMMM Do YYYY, hh:mm:ss');
 nunjucksDate.install(env);
 
-// And finally Slack config
-var slack = new Slack(config.get('slack').domain,config.get('slack').api_token)
+// Let's get the users so we can store / update their avatars
+var avatars = [];
+var users_url = "https://slack.com/api/users.list?token=" + config.get('slack').api_token
+request(users_url, function (error, response, body) {
+  if (!error && response.statusCode == 200) {
+    const users_list = JSON.parse(body);
+    for (var user in users_list.members) {
+      avatars[users_list.members[user].name] = users_list.members[user].profile.image_48;
+    }
+  } else {
+    console.log("Got an error: ", error, ", status code: ", response.statusCode);
+  }
+});
 
 // This is the full history endpoint
 app.get('/:channel',function(req,res) {
@@ -51,7 +62,7 @@ app.get('/:channel',function(req,res) {
 
         // All messages
         db.getMessages(req.params.channel, function(messages) {
-          res.render('history.html', { "channel": req.params.channel, "messages": messages, "start_date": Date.now(), "end_date": Date.now() })
+          res.render('history.html', { "channel": req.params.channel, "messages": messages, avatars: avatars, "start_date": Date.now(), "end_date": Date.now() })
         })
     }
 
@@ -74,7 +85,7 @@ app.get('/search/:channel/:terms',function(req,res) {
           for (var i = 0; i < results.length; i++) {
             results[i].message = _str.highlight(results[i].message, words_array)
           }
-          res.render('search.html', { "channel": req.params.channel, "terms": req.params.terms, "results": results })
+          res.render('search.html', { "channel": req.params.channel, "terms": req.params.terms, avatars: avatars, "results": results })
         })
     }
 
@@ -201,11 +212,10 @@ app.post(config.get('slack').command_endpoint,function(req,res) {
 
     } else if (req.body.command == config.get('slack').command_stats_command){
 
-        var poster = req.body.text
         var channel = req.body.channel_name
 
         // We need to output stats ;)
-        db.stat(poster, channel, function(results) {
+        db.stat(channel, function(results) {
 
           var text = "```| User              | Most common word                  | Messages total     |\n";
              text += "------------------------------------------------------------------------------\n";
