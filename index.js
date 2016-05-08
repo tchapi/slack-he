@@ -38,12 +38,16 @@ nunjucksDate.install(env);
 
 // Let's get the users so we can store / update their avatars
 var avatars = [];
+var avatars_id = [];
+var team_url = "https://" + config.get('slack').domain + ".slack.com/team/";
 var users_url = "https://slack.com/api/users.list?token=" + config.get('slack').api_token
+
 request(users_url, function (error, response, body) {
   if (!error && response.statusCode == 200) {
     const users_list = JSON.parse(body);
     for (var user in users_list.members) {
       avatars[users_list.members[user].name] = users_list.members[user].profile.image_48;
+      avatars_id[users_list.members[user].id] = users_list.members[user].name;
     }
   } else {
     console.log("Got an error: ", error, ", status code: ", response.statusCode);
@@ -128,8 +132,14 @@ app.post('/',function(req,res) {
 
     } else {
 
+        // Change <@ID> to something relevant
+        var message = req.body.text.replace(/<@[^>]*>/g, function users_to_name(x){
+          x = x.replace("<@", "").replace(">", "")
+          return "<a target='_blank' href='" + team_url + avatars_id[x] + "'>" + avatars_id[x] + "</a>";
+        });
+
         // Store message, and that's all
-        db.insertMessage(req.body.user_name, Date.now(), req.body.text, req.body.channel_name)
+        db.insertMessage(req.body.user_name, Date.now(), message, req.body.channel_name)
         res.status(200).end() // OK
 
     }

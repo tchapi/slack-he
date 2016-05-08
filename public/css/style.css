@@ -22,6 +22,10 @@ body {
     margin-top: 70px;
 }
 
+a {
+    text-decoration: none;
+}
+
 .channel_header {
     display: -webkit-box;
     display: -webkit-flex;

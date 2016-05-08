@@ -46,7 +46,7 @@
     </a>
     {% endif %}
 
-    <span class="message_body">{{ message.message}}</span>
+    <span class="message_body">{{ message.message|safe  }}</span>
 
   </div>
 

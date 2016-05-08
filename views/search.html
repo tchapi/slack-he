@@ -37,7 +37,7 @@
       <span class="ts_tip_tip"><span class="ts_tip_multiline_inner">{{ message.timestamp|date }}</span></span>
     </a>
 
-    <span class="message_body">{{ message.message}}</span>
+    <span class="message_body">{{ message.message|safe }}</span>
 
   </div>
 
