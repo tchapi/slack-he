@@ -8,7 +8,7 @@ A bot that stores all messages and enables full deep search and statistics via i
     npm install
     sqlite3 db.sqlite < structure.sqlite
 
-You must as well copy `config.json/dist` to `config.json` and edit the relevant configuration herein.
+You must as well copy `config.json.dist` to `config.json` and edit the relevant configuration herein.
 
 #### Run
 
