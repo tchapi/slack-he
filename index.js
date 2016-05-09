@@ -75,24 +75,6 @@ request(channels_url, function (error, response, body) {
   }
 });
 
-// This is the full history endpoint
-app.get('/:channel',function(req,res) {
-
-    if (req.query.token != config.get('slack').pages_token) {
-
-        console.log("Bad token :", req.query.token)
-        res.status(403).end()
-
-    } else {
-
-        // All messages
-        db.getMessages(req.params.channel, function(messages) {
-          res.render('history.html', { "channel": req.params.channel, "messages": messages, avatars: avatars, "start_date": Date.now(), "end_date": Date.now() })
-        })
-    }
-
-})
-
 // This is the search results endpoint
 app.get('/search/:channel/:terms',function(req,res) {
 
@@ -116,6 +98,36 @@ app.get('/search/:channel/:terms',function(req,res) {
 
 })
 
+// This is the full history endpoint
+app.get('/:channel/:from?/:to?',function(req,res) {
+
+    if (req.query.token != config.get('slack').pages_token) {
+
+        console.log("Bad token :", req.query.token)
+        res.status(403).end()
+
+    } else {
+
+        // All messages, check dates 
+
+        var to_date = Date.parse(req.params.to);
+        if (isNaN(to_date) || to_date > Date.now()) {
+          to_date = Date.now() + 1 * 1000  // a bit ahead
+        }
+        var from_date = Date.parse(req.params.from);
+        if (isNaN(from_date)) {
+          to_date = Date.now()
+          from_date = Date.now() - 60 * 60 * 24 * 1000; // one day by default
+        }
+
+        //console.log("history (" +  new Date().toLocaleString() + ") from " + from_date + "(" +  new Date(from_date).toLocaleString() + ")" + " to " + to_date + "(" +  new Date(to_date).toLocaleString() + ")")
+
+        db.getMessages(req.params.channel, from_date, to_date, function(messages) {
+          res.render('history.html', { "channel": req.params.channel, "token": req.query.token, "messages": messages, avatars: avatars, "start_date": from_date, "end_date": to_date })
+        })
+    }
+
+})
 
 /* That is the endpoint Slack posts to 
    for all incoming messages
@@ -162,7 +174,7 @@ app.post('/',function(req,res) {
         // Change <#C178PKDCY> to something relevant
         message = message.replace(/<#[^>]*>/g, function channels_to_name(x){
           x = x.replace("<#", "").replace(">", "")
-          return "<a target='_blank' href='" + team_url + channels_id[x] + "'>#" + channels_id[x] + "</a>";
+          return "<a target='_blank' href='" + channel_url + channels_id[x] + "'>#" + channels_id[x] + "</a>";
         });
 
         // Change <links> to something relevant

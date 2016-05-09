@@ -83,10 +83,10 @@ p.search = function(text, channel, poster, callback) {
 
 }
 
-p.getMessages = function(channel, callback) {
+p.getMessages = function(channel, from_date, to_date, callback) {
 
-  var sql = "SELECT * FROM data WHERE channel = $channel"
-  var params = { $channel: channel };
+  var sql = "SELECT * FROM data WHERE channel = $channel AND timestamp > $from AND timestamp < $to"
+  var params = { $channel: channel, $from: from_date, $to: to_date };
 
   this.db.serialize((function() {
 
