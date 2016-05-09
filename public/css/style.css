@@ -210,6 +210,9 @@ ts-message .message_body {
 ts-message .message_body {
     cursor: text;
 }
+ts-message .message_body p{
+    margin: 0;
+}
 
 ts-message highlight {
     background: #FFFF66;

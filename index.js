@@ -39,7 +39,7 @@ var env = nunjucks.configure('views', {
     autoescape: false,
     express: app
 })
-nunjucksDate.setDefaultFormat('MMMM Do YYYY, hh:mm:ss');
+nunjucksDate.setDefaultFormat('MMMM Do YYYY, HH:mm:ss');
 nunjucksDate.install(env);
 
 // Let's get the users so we can store / update their avatars
@@ -61,6 +61,7 @@ request(users_url, function (error, response, body) {
 });
 
 var channels_id = [];
+var channel_url = "https://" + config.get('slack').domain + ".slack.com/messages/";
 var channels_url = "https://slack.com/api/channels.list?token=" + config.get('slack').api_token
 
 request(channels_url, function (error, response, body) {
@@ -162,6 +163,12 @@ app.post('/',function(req,res) {
         message = message.replace(/<#[^>]*>/g, function channels_to_name(x){
           x = x.replace("<#", "").replace(">", "")
           return "<a target='_blank' href='" + team_url + channels_id[x] + "'>#" + channels_id[x] + "</a>";
+        });
+
+        // Change <links> to something relevant
+        message = message.replace(/<http[^>]*>/g, function urls_to_urls(x){
+          x = x.replace("<", "").replace(">", "")
+          return "<a target='_blank' href='" + x + "'>" + x + "</a>";
         });
 
         // And then markdown
