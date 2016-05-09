@@ -22,6 +22,8 @@
   </div>
 </div>
 
+{% if messages|length > 0%}
+
 {% if start_date != 0%}
 <a class="load_more" href="/{{ channel }}/{{ (start_date - 60*60*24*1000)|date("YYYY-MM-DD HH:mm:ss") }}/{{ end_date|date("YYYY-MM-DD HH:mm:ss") }}?token={{ token }}">Load previous ...</a>
 {% endif %}
@@ -59,5 +61,7 @@
 {% endfor %}
 
 <a class="load_more load_next" href="/{{ channel }}/{{ start_date|date("YYYY-MM-DD HH:mm:ss") }}/{{ (end_date + 60*60*24*1000)|date("YYYY-MM-DD HH:mm:ss") }}?token={{ token }}">Load next ...</a>
+
+{% endif %}
 
 {% endblock %}
