@@ -17,7 +17,7 @@ p.pad = function (pad_char, pad_size, str, padLeft) {
 
 p.enclose = function(text, start_str, end_str, words_array) {
   for (var j = 0; j < words_array.length; j++) {
-    text = text.replace(words_array[j], start_str + words_array[j] + end_str);
+    text = text.replace(new RegExp('('+words_array[j]+')', 'gi'), start_str + words_array[j] + end_str);
   }
   return text;
 }
