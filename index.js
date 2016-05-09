@@ -5,6 +5,12 @@ var nunjucksDate = require('nunjucks-date');
 
 var request = require('request')
 
+var md = require('markdown-it')({
+  html: true,
+  linkify: true,
+  typographer: true
+});
+
 var app = express()
 
 // Add string helper module
@@ -48,6 +54,20 @@ request(users_url, function (error, response, body) {
     for (var user in users_list.members) {
       avatars[users_list.members[user].name] = users_list.members[user].profile.image_48;
       avatars_id[users_list.members[user].id] = users_list.members[user].name;
+    }
+  } else {
+    console.log("Got an error: ", error, ", status code: ", response.statusCode);
+  }
+});
+
+var channels_id = [];
+var channels_url = "https://slack.com/api/channels.list?token=" + config.get('slack').api_token
+
+request(channels_url, function (error, response, body) {
+  if (!error && response.statusCode == 200) {
+    const channels_list = JSON.parse(body);
+    for (var channel in channels_list.channels) {
+      channels_id[channels_list.channels[channel].id] = channels_list.channels[channel].name;
     }
   } else {
     console.log("Got an error: ", error, ", status code: ", response.statusCode);
@@ -135,8 +155,17 @@ app.post('/',function(req,res) {
         // Change <@ID> to something relevant
         var message = req.body.text.replace(/<@[^>]*>/g, function users_to_name(x){
           x = x.replace("<@", "").replace(">", "")
-          return "<a target='_blank' href='" + team_url + avatars_id[x] + "'>" + avatars_id[x] + "</a>";
+          return "<a target='_blank' href='" + team_url + avatars_id[x] + "'>@" + avatars_id[x] + "</a>";
         });
+
+        // Change <#C178PKDCY> to something relevant
+        message = message.replace(/<#[^>]*>/g, function channels_to_name(x){
+          x = x.replace("<#", "").replace(">", "")
+          return "<a target='_blank' href='" + team_url + channels_id[x] + "'>#" + channels_id[x] + "</a>";
+        });
+
+        // And then markdown
+        message = md.render(message);
 
         // Store message, and that's all
         db.insertMessage(req.body.user_name, Date.now(), message, req.body.channel_name)
