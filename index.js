@@ -212,7 +212,7 @@ app.post(config.get('slack').command_endpoint,function(req,res) {
 
     */
 
-    if (req.body.token != config.get('slack').command_token) {
+    if (req.body.token != config.get('slack').command_stats_token && req.body.token != config.get('slack').command_search_token) {
 
         console.log("Bad token :", req.body.token)
         res.status(403).end()
@@ -225,6 +225,13 @@ app.post(config.get('slack').command_endpoint,function(req,res) {
 
         var search_text = req.body.text
         var channel = req.body.channel_name
+
+        // If no search term is provided, we just output the url of the history page
+        if (search_text == "") {
+          var history_url = config.get('host') + "/" + channel + "?token=" + config.get('slack').pages_token
+          res.json({ "text": ""}).end()
+          return;
+        }
 
         // We need to search
         db.search(search_text, channel, null, function(results) {
@@ -249,7 +256,7 @@ app.post(config.get('slack').command_endpoint,function(req,res) {
           var color = config.get('slack').search.color
           
           var words_array = search_text.split(' ');
-          var url = config.get('host') + "/search/" + channel + "/" + encodeURIComponent(search_text) + "?token=" + config.get('slack').payload_token
+          var url = config.get('host') + "/search/" + channel + "/" + encodeURIComponent(search_text) + "?token=" + config.get('slack').pages_token
           var response = { "text": "🔎 Top " + Math.min(results.length, max_results) + " results for '" + search_text + "'" + (max_results<results.length?" (<"+ url +"|see all>)":"") + " :", "attachments": [] }
 
           for (var i = 0; i < Math.min(results.length, max_results); i++) {
