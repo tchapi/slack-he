@@ -19,10 +19,19 @@
 {% block script %}
 <script src="//cdn.jsdelivr.net/emojione/2.1.4/lib/js/emojione.min.js"></script>
 <script type="text/javascript">
-var bodies = document.getElementsByTagName("ts-body");
-for (var i = 0; i < bodies.length; i++) {
-    bodies[i].innerHTML = emojione.toImage(bodies[i].innerHTML);
-}
+
+  function convert_emojis() {
+    var bodies = document.getElementsByTagName("ts-body");
+    for (var i = 0; i < bodies.length; i++) {
+        // Manage skin tones
+        var str = bodies[i].innerHTML;
+        str = str.replace(/:skin-tone-[0-9]:/gi, "");
+        bodies[i].innerHTML = emojione.toImage(str);
+    }
+  }
+
+  convert_emojis();
+
  </script>
 {% endblock %}
 
