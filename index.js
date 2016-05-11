@@ -252,6 +252,11 @@ app.post(config.get('slack').command_endpoint,function(req,res) {
             }
           */
 
+          if (results.length == 0) {
+            res.json({ "text": "Woops, no results for '" + search_text + "'"}).end()
+            return;
+          }
+
           var max_results = config.get('slack').search.limit
           var color = config.get('slack').search.color
           

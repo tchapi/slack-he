@@ -15,7 +15,7 @@ var p = SQLiteWrapper.prototype
 
 p.insertMessage = function(poster, timestamp, messageHTML, message, channel) {
 
-  var stmt = this.db.prepare("INSERT INTO data (message, poster, timestamp, channel) VALUES ($message, $poster, $timestamp, $channel)");
+  var stmt = this.db.prepare("INSERT INTO data (message, poster, timestamp, channel) VALUES ($message, $poster, $timestamp, $channel);");
 
   stmt.run({
         $message: messageHTML,
@@ -26,7 +26,7 @@ p.insertMessage = function(poster, timestamp, messageHTML, message, channel) {
 
         /// For FTS4
         var docid = stmt.lastID;
-        var stmtFTS = this.db.prepare("INSERT INTO dataFTS (docid, message, poster) VALUES ($docid, $message, $poster)");
+        var stmtFTS = this.db.prepare("INSERT INTO dataFTS (docid, message, poster) VALUES ($docid, $message, $poster);");
 
         stmtFTS.run({
               $docid: docid,
@@ -80,7 +80,7 @@ p.insertMessage = function(poster, timestamp, messageHTML, message, channel) {
 
 p.search = function(text, channel, poster, callback) {
 
-  var sql = "SELECT docid, * FROM dataFTS WHERE message MATCH $search AND channel = $channel";
+  var sql = "SELECT docid, * FROM dataFTS WHERE message MATCH $search AND channel = $channel;";
   var params = { $search: text, $channel: channel };
 
   if (poster != null) {
@@ -103,7 +103,7 @@ p.search = function(text, channel, poster, callback) {
 
 p.getMessages = function(channel, from_date, to_date, callback) {
 
-  var sql = "SELECT * FROM data WHERE channel = $channel AND timestamp > $from AND timestamp < $to"
+  var sql = "SELECT * FROM data WHERE channel = $channel AND timestamp > $from AND timestamp < $to;"
   var params = { $channel: channel, $from: from_date, $to: to_date };
 
   this.db.serialize((function() {
