@@ -29,13 +29,16 @@ a {
 a.load_more {
     margin: 0 26px 10px;
     background-color: #eee;
-    padding: 5px 10px;
+    padding: 5px 15px;
     display: inline-block;
     border-radius: 2px;
     color: #888;
 }
 a.load_next {
-    margin: 10px 26px 10px;
+    margin: 10px 15px 10px 26px;
+}
+a.load_last {
+    margin: 10px 0px 10px;
 }
 a.load_more:hover {
     background-color: #ddd;

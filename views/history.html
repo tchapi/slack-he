@@ -51,7 +51,7 @@
     </a>
     {% endif %}
 
-    <span class="message_body">{{ message.message|safe  }}</span>
+    <ts-body class="message_body">{{ message.message|safe  }}</ts-body>
 
   </div>
 
@@ -60,7 +60,10 @@
 {% set timestamp = message.timestamp %}
 {% endfor %}
 
-<a class="load_more load_next" href="/{{ channel }}/{{ start_date|date("YYYY-MM-DD HH:mm:ss") }}/{{ (end_date + 60*60*24*1000)|date("YYYY-MM-DD HH:mm:ss") }}?token={{ token }}">Load next ...</a>
+<span id="end"></span>
+
+<a class="load_more load_next" href="/{{ channel }}/{{ start_date|date("YYYY-MM-DD HH:mm:ss") }}/{{ (end_date + 60*60*24*1000)|date("YYYY-MM-DD HH:mm:ss") }}?token={{ token }}#end">Load next ...</a>
+<a class="load_more load_last" href="/{{ channel }}/{{ start_date|date("YYYY-MM-DD HH:mm:ss") }}?token={{ token }}#end">Go to last</a>
 
 {% endif %}
 

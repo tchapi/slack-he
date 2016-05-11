@@ -7,7 +7,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" href="/static/img/favicon.ico">
-    {% block stylesheets %}{% endblock %}
+    {% block stylesheets %}
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/emojione/2.1.4/assets/css/emojione.min.css"/>
+    {% endblock %}
 </head>
 <body>
 
@@ -15,6 +17,13 @@
 {% endblock %}
 
 {% block script %}
+<script src="//cdn.jsdelivr.net/emojione/2.1.4/lib/js/emojione.min.js"></script>
+<script type="text/javascript">
+var bodies = document.getElementsByTagName("ts-body");
+for (var i = 0; i < bodies.length; i++) {
+    bodies[i].innerHTML = emojione.toImage(bodies[i].innerHTML);
+}
+ </script>
 {% endblock %}
 
   </body>
