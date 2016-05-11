@@ -23,7 +23,7 @@ var config = new CONFIG()
 
 // Add SQLite Wrapper
 var SQLiteWrapper = require('./services/SQLiteWrapper')
-var db = new SQLiteWrapper(config.get("db"))
+var db = new SQLiteWrapper({"db": config.get("db"), "stopwords": config.get("stopwords")})
 
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: false }))
@@ -166,28 +166,28 @@ app.post('/',function(req,res) {
     } else {
 
         // Change <@ID> to something relevant
-        var message = req.body.text.replace(/<@[^>]*>/g, function users_to_name(x){
+        var messageHTML = req.body.text.replace(/<@[^>]*>/g, function users_to_name(x){
           x = x.replace("<@", "").replace(">", "")
           return "<a target='_blank' href='" + team_url + avatars_id[x] + "'>@" + avatars_id[x] + "</a>";
         });
 
         // Change <#C178PKDCY> to something relevant
-        message = message.replace(/<#[^>]*>/g, function channels_to_name(x){
+        messageHTML = messageHTML.replace(/<#[^>]*>/g, function channels_to_name(x){
           x = x.replace("<#", "").replace(">", "")
           return "<a target='_blank' href='" + channel_url + channels_id[x] + "'>#" + channels_id[x] + "</a>";
         });
 
         // Change <links> to something relevant
-        message = message.replace(/<http[^>]*>/g, function urls_to_urls(x){
+        messageHTML = messageHTML.replace(/<http[^>]*>/g, function urls_to_urls(x){
           x = x.replace("<", "").replace(">", "")
           return "<a target='_blank' href='" + x + "'>" + x + "</a>";
         });
 
         // And then markdown
-        message = md.render(message);
+        messageHTML = md.render(messageHTML);
 
         // Store message, and that's all
-        db.insertMessage(req.body.user_name, Date.now(), message, req.body.channel_name)
+        db.insertMessage(req.body.user_name, Date.now(), messageHTML, req.body.text, req.body.channel_name)
         res.status(200).end() // OK
 
     }
@@ -229,7 +229,7 @@ app.post(config.get('slack').command_endpoint,function(req,res) {
         // If no search term is provided, we just output the url of the history page
         if (search_text == "") {
           var history_url = config.get('host') + "/" + channel + "?token=" + config.get('slack').pages_token
-          res.json({ "text": ""}).end()
+          res.json({ "text": "You can find the whole channel history <" + history_url + "|here>."}).end()
           return;
         }
 

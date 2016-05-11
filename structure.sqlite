@@ -1,4 +1,4 @@
 CREATE TABLE data (id INTEGER PRIMARY KEY, message TEXT, poster VARCHAR(255), timestamp INTEGER, channel TEXT);
 CREATE VIRTUAL TABLE dataFTS USING fts4(content="data", tokenize=unicode61, message, poster, timestamp, channel);
 
-CREATE TABLE stats (id INTEGER PRIMARY KEY, word VARCHAR(255), poster VARCHAR(255), channel TEXT);
+CREATE TABLE stats (id INTEGER PRIMARY KEY, word VARCHAR(255), poster VARCHAR(255), channel TEXT, count INTEGER DEFAULT 1, UNIQUE (word, poster, channel) ON CONFLICT IGNORE);
