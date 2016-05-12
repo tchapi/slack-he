@@ -15,10 +15,11 @@ var p = SQLiteWrapper.prototype
 
 p.insertMessage = function(poster, timestamp, messageHTML, message, channel) {
 
-  var stmt = this.db.prepare("INSERT INTO data (message, poster, timestamp, channel) VALUES ($message, $poster, $timestamp, $channel);");
+  var stmt = this.db.prepare("INSERT INTO data (message, message_raw, poster, timestamp, channel) VALUES ($message, $message_raw, $poster, $timestamp, $channel);");
 
   stmt.run({
         $message: messageHTML,
+        $message_raw: message,
         $poster: poster,
         $timestamp: timestamp,
         $channel: channel
@@ -78,13 +79,13 @@ p.insertMessage = function(poster, timestamp, messageHTML, message, channel) {
 
 }
 
-p.search = function(text, channel, poster, callback) {
+p.search = function(text, channel, poster, return_html, callback) {
 
-  var sql = "SELECT docid, * FROM dataFTS WHERE message MATCH $search AND channel = $channel;";
+  var sql = "SELECT docid, *, d.message_raw AS message_raw FROM dataFTS f JOIN data d ON d.id = f.docid WHERE f.message MATCH $search AND f.channel = $channel;";
   var params = { $search: text, $channel: channel };
 
   if (poster != null) {
-    sql += " AND poster = ?";
+    sql += " AND poster = $poster";
     params = { $search: text, $channel: channel, $poster: poster };
   }
 
@@ -92,7 +93,7 @@ p.search = function(text, channel, poster, callback) {
 
     var results = []; 
     this.db.each(sql, params, function(err, row) {
-        results.push({ "docid" : row.docid, "message": row.message, "poster": row.poster, "timestamp": row.timestamp });
+        results.push({ "docid" : row.docid, "message": (return_html?row.message:row.message_raw), "poster": row.poster, "timestamp": row.timestamp });
     }, function(err, nb) {
       callback(results)
     });
@@ -129,7 +130,6 @@ p.stat = function(channel, callback) {
 
     this.db.each(sql_words, params, function(err, row) {
         if (row) {
-          console.log(row)
           results[row.poster]= { "word" : row.word, "word_count": row.word_count, "total": 0, "average": 0 };
         }
     }, (function(err, nb) {

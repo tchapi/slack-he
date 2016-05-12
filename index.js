@@ -86,7 +86,7 @@ app.get('/search/:channel/:terms',function(req,res) {
     } else {
 
         // Search
-        db.search(req.params.terms, req.params.channel, null, function(results) {
+        db.search(req.params.terms, req.params.channel, null, true, function(results) {
 
           var words_array = req.params.terms.split(' ');
           for (var i = 0; i < results.length; i++) {
@@ -234,7 +234,7 @@ app.post(config.get('slack').command_endpoint,function(req,res) {
         }
 
         // We need to search
-        db.search(search_text, channel, null, function(results) {
+        db.search(search_text, channel, null, false, function(results) {
 
           // We format the results
           /*
@@ -262,7 +262,7 @@ app.post(config.get('slack').command_endpoint,function(req,res) {
           
           var words_array = search_text.split(' ');
           var url = config.get('host') + "/search/" + channel + "/" + encodeURIComponent(search_text) + "?token=" + config.get('slack').pages_token
-          var response = { "text": "🔎 Top " + Math.min(results.length, max_results) + " results for '" + search_text + "'" + (max_results<results.length?" (<"+ url +"|see all>)":"") + " :", "attachments": [] }
+          var response = { "text": "🔎 Top " + Math.min(results.length, max_results) + " results for '" + search_text + "'" + (max_results<results.length?" (<"+ url +"|see all>)":" (<"+ url +"|see in the browser>)") + " :", "attachments": [] }
 
           for (var i = 0; i < Math.min(results.length, max_results); i++) {
 
@@ -273,7 +273,7 @@ app.post(config.get('slack').command_endpoint,function(req,res) {
                       "color": color,
                       "author_name": results[i].poster + " @ " + new Date(results[i].timestamp).toLocaleString(),
                       "text": h_text,
-                      "mrkdwn_in": ["text", "author_name"]
+                      "mrkdwn_in": ["text"]
                   });
           }
 
