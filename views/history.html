@@ -7,7 +7,8 @@
       <h2 id="channel_name_container" class="channel_name_container">
         <div id="active_channel_name_overlay" class="onboarding_overlay hidden"></div>
         <span id="channel_name" class="channel_name">
-            <span id="channel_title">#{{ channel }}</span></span>
+          <span id="channel_title">#{{ channel }}</span>
+        </span>
       </h2>
 
       <div id="channel_header_info">
@@ -24,46 +25,46 @@
 
 {% if messages|length > 0%}
 
-{% if start_date != 0%}
-<a class="load_more" href="/{{ channel }}/{{ (start_date - 60*60*24*1000)|date("YYYY-MM-DD HH:mm:ss") }}/{{ end_date|date("YYYY-MM-DD HH:mm:ss") }}?token={{ token }}">Load previous ...</a>
-{% endif %}
+  {% if start_date != 0%}
+  <a class="load_more" href="/{{ channel }}/{{ (start_date - 60*60*24*1000)|date("YYYY-MM-DD HH:mm:ss") }}/{{ end_date|date("YYYY-MM-DD HH:mm:ss") }}?token={{ token }}">Load previous ...</a>
+  {% endif %}
 
-{% for message in messages %}
-<ts-message id="message_{{ message.id }}" class="message feature_fix_files first">
+  {% for message in messages %}
+  <ts-message id="message_{{ message.id }}" class="message feature_fix_files first">
 
-  <div class="message_gutter">
+    <div class="message_gutter">
 
-    {% if poster != message.poster or message.timestamp > timestamp + 10*60*1000 %}
-    <div class="message_icon">
-      <a class=" member_preview_link member_image thumb_36" style="background-image: url('{{ avatars[message.poster] }}')"></a>
+      {% if poster != message.poster or message.timestamp > timestamp + 10*60*1000 %}
+      <div class="message_icon">
+        <a class=" member_preview_link member_image thumb_36" style="background-image: url('{{ avatars[message.poster] }}')"></a>
+      </div>
+      {% endif %}
+
     </div>
-    {% endif %}
 
-  </div>
+    <div class="message_content ">
 
-  <div class="message_content ">
+      {% if poster != message.poster or message.timestamp > timestamp + 10*60*1000 %}
+      <a class="message_sender member member_preview_link color_U03FXRM6H color_e7392d ">{{ message.poster }}</a>
 
-    {% if poster != message.poster or message.timestamp > timestamp + 10*60*1000 %}
-    <a class="message_sender member member_preview_link color_U03FXRM6H color_e7392d ">{{ message.poster }}</a>
+      <a class="timestamp ts_tip ts_tip_top ts_tip_float ts_tip_multiline ts_tip_delay_300 ts_tip_hidden">
+        <span class="ts_tip_tip"><span class="ts_tip_multiline_inner">{{ message.timestamp|date }}</span></span>
+      </a>
+      {% endif %}
 
-    <a class="timestamp ts_tip ts_tip_top ts_tip_float ts_tip_multiline ts_tip_delay_300 ts_tip_hidden">
-      <span class="ts_tip_tip"><span class="ts_tip_multiline_inner">{{ message.timestamp|date }}</span></span>
-    </a>
-    {% endif %}
+      <ts-body class="message_body">{{ message.message|safe  }}</ts-body>
 
-    <ts-body class="message_body">{{ message.message|safe  }}</ts-body>
+    </div>
 
-  </div>
+  </ts-message>
+  {% set poster = message.poster %}
+  {% set timestamp = message.timestamp %}
+  {% endfor %}
 
-</ts-message>
-{% set poster = message.poster %}
-{% set timestamp = message.timestamp %}
-{% endfor %}
+  <span id="end"></span>
 
-<span id="end"></span>
-
-<a class="load_more load_next" href="/{{ channel }}/{{ start_date|date("YYYY-MM-DD HH:mm:ss") }}/{{ (end_date + 60*60*24*1000)|date("YYYY-MM-DD HH:mm:ss") }}?token={{ token }}#end">Load next ...</a>
-<a class="load_more load_last" href="/{{ channel }}/{{ start_date|date("YYYY-MM-DD HH:mm:ss") }}?token={{ token }}#end">Go to last</a>
+  <a class="load_more load_next" href="/{{ channel }}/{{ start_date|date("YYYY-MM-DD HH:mm:ss") }}/{{ (end_date + 60*60*24*1000)|date("YYYY-MM-DD HH:mm:ss") }}?token={{ token }}#end">Load next ...</a>
+  <a class="load_more load_last" href="/{{ channel }}/{{ start_date|date("YYYY-MM-DD HH:mm:ss") }}?token={{ token }}#end">Go to last</a>
 
 {% endif %}
 

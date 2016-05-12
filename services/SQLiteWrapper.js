@@ -53,6 +53,9 @@ p.insertMessage = function(poster, timestamp, messageHTML, message, channel) {
 
             for (var i = 0; i < words.length; i++) {
 
+              // We need significant words
+              if (words[i].length < 3) { continue; }
+
               //Try to update any existing row then
               // Make sure it exists
               var stmtStats = this.db.prepare("UPDATE OR IGNORE stats SET count = count + 1 WHERE word = $word AND poster = $poster AND channel = $channel;");
@@ -134,7 +137,7 @@ p.stat = function(channel, callback) {
         }
     }, (function(err, nb) {
       this.db.each(sql_total, params, function(err, row) {
-          if (row) {
+          if (row && results[row.poster]) {
             results[row.poster].total = row.total;
             results[row.poster].average = row.average;
           }
