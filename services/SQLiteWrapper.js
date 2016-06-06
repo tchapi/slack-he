@@ -54,7 +54,7 @@ p.insertMessage = function(poster, timestamp, messageHTML, message, channel) {
             for (var i = 0; i < words.length; i++) {
 
               // We need significant words
-              if (words[i].length < 3) { continue; }
+              if (words[i].length < 4) { continue; }
 
               //Try to update any existing row then
               // Make sure it exists
