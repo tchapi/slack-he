@@ -129,6 +129,7 @@ p.getMessages = function(channel, from_date, to_date, callback) {
 
 p.stat = function(channel, callback) {
 
+  var sql_timestamp = "SELECT MIN(timestamp) AS min_t FROM data WHERE channel = $channel;";
   var sql_total = "SELECT poster, AVG(msg_count) AS average, SUM(msg_count) AS total FROM (SELECT poster, timestamp, COUNT(*) AS msg_count FROM data WHERE channel = $channel GROUP BY timestamp/(1000*60*60*24), poster) a GROUP BY poster;"
   var sql_words = "SELECT word, poster, MAX(count) as word_count FROM stats WHERE channel = $channel GROUP BY poster;";
   var params = { $channel: channel };
@@ -147,9 +148,12 @@ p.stat = function(channel, callback) {
             results[row.poster].total = row.total;
             results[row.poster].average = row.average;
           }
-      }, function(err, nb) {
-        callback(results)
-      });
+      }, (function(err, nb) {
+        this.db.get(sql_timestamp, params, function(err, row) {
+          results['special_timestamp'] = row.min_t;
+          callback(results)
+        });
+      }).bind(this));
     }).bind(this));
 
   }).bind(this));

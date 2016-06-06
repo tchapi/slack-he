@@ -60,6 +60,7 @@ request(users_url, function (error, response, body) {
   }
 });
 
+// Idem for channels
 var channels_id = [];
 var channel_url = "https://" + config.get('slack').domain + ".slack.com/messages/";
 var channels_url = "https://slack.com/api/channels.list?token=" + config.get('slack').api_token
@@ -287,10 +288,13 @@ app.post(config.get('slack').command_endpoint,function(req,res) {
         // We need to output stats ;)
         db.stat(channel, function(results) {
 
-          var text = "```| User              | Most common word                  | Messages total     |\n";
-             text += "------------------------------------------------------------------------------\n";
+          var text = "Word stats since *" + new Date(results['special_timestamp']).toLocaleString() + "* :";
+
+          text += "```| User              | Most common word                  | Messages total     |\n";
+          text += "------------------------------------------------------------------------------\n";
 
           for (var p in results) {
+            if (p =='special_timestamp') { continue; }
             text += "| " + _str.pad(' ', 18, p) + " | " + _str.pad(' ', 34, results[p].word + " (" + results[p].word_count + " occurences)") + " | " + _str.pad(' ', 19, results[p].total + " (" + parseInt(results[p].average) + "/d.avg)") + " |\n";
           }
           
