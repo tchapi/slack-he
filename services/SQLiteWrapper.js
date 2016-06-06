@@ -44,12 +44,12 @@ p.insertMessage = function(poster, timestamp, messageHTML, message, channel) {
 
             // Clean message and extract alpha words
             message = message.replace(/(?:https?|ftp):\/\/[\n\S]+/g, '');
-            message = message.replace(/[-'`~!@#$%^&*()_|+=?;'",.<>\{\}\[\]\\\/]/gi, '');
+            message = message.replace(/[-'`‘’«»“”¶§¡øØ°—–€¥$@#‰£≠±÷…•∞¿´„•≥≤~√⁄≈›‹Ω‡∑∂∆ƒ·ﬁﬂ|¬π∏ºª†™®‚◊¨~!@#$%^&*()_|+=?;'",.<>\{\}\[\]\\\/]/gi, ' ');
 
             // Remove stop words from list
             message = message.replace(this.stopwords_regex, '');
 
-            var words = message.trim().replace(/ +(?= )/g,'').split(' ')
+            var words = message.trim().replace(/ +(?= )/gi,'').split(/[\s,]+/)
 
             for (var i = 0; i < words.length; i++) {
 
@@ -72,7 +72,7 @@ p.insertMessage = function(poster, timestamp, messageHTML, message, channel) {
                     $channel: channel
                 });
             }
-
+            
             this.db.exec("COMMIT");
 
         }).bind(this));
