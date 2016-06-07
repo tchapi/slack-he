@@ -30,7 +30,7 @@ http://your.host/[channel]
 
 #### Search command
 
-The search command is `/search "search terms or phrase"`.
+The search command is `/history "search terms or phrase"`.
 
 It is a full-text search which is performed against the whole database through SQLite's [FTS4](https://www.sqlite.org/fts3.html#section_1).
 
