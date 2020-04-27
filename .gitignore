@@ -36,6 +36,4 @@ config.json
 db.sqlite
 test_curl.sh
 
-deploy/*
-!deploy/nginx.conf
-!deploy/slack-he.supervisor.conf
+deploy/vars.yml
