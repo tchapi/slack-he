@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const nunjucks = require('nunjucks');
 const nunjucksDate = require('nunjucks-date');
 const fetch = require('node-fetch');
-const { App, LogLevel, ExpressReceiver } = require('@slack/bolt');
+const { App, ExpressReceiver } = require('@slack/bolt');
 const dotenv = require('dotenv');
 const md = require('markdown-it')({
   html: true,
@@ -16,9 +16,11 @@ const SQLiteWrapper = require('./services/SQLiteWrapper');
 
 dotenv.config();
 
-if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_SIGNING_SECRET || !process.env.ACCESS_TOKEN) {
+if (!process.env.SLACK_BOT_TOKEN
+    || !process.env.SLACK_SIGNING_SECRET
+    || !process.env.ACCESS_TOKEN) {
   console.error('Error: You must provide a SLACK_BOT_TOKEN, a SLACK_SIGNING_SECRET and an ACCESS_TOKEN in your .env file.');
-  return;
+  process.exit(1);
 }
 
 console.log('🛠  Config read from .env file');
@@ -30,7 +32,6 @@ const receiver = new ExpressReceiver({
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
   receiver,
-//   logLevel: LogLevel.INFO
 });
 
 receiver.app.use(bodyParser.urlencoded({ extended: false }));
@@ -48,7 +49,7 @@ nunjucksDate.setDefaultFormat('MMMM Do YYYY, HH:mm:ss');
 nunjucksDate.install(nunjucksEnv);
 
 // Add string helper module
-const _str = new StringHelper();
+const strHelper = new StringHelper();
 
 // Add config module
 const config = new CONFIG();
@@ -103,11 +104,13 @@ receiver.app.get('/search/:channel/:terms', (req, res) => {
     // Search
     db.search(req.params.terms, req.params.channel, null, true, (results) => {
       const wordsArray = req.params.terms.split(' ');
+      const highlightedResults = [];
       for (let i = 0; i < results.length; i += 1) {
-        results[i].message = _str.highlight(results[i].message, wordsArray);
+        highlightedResults[i] = results[i];
+        highlightedResults[i].message = strHelper.highlight(results[i].message, wordsArray);
       }
       res.render('search.html', {
-        channel: req.params.channel, terms: req.params.terms, avatars, results,
+        channel: req.params.channel, terms: req.params.terms, avatars, highlightedResults,
       });
     });
   }
@@ -131,13 +134,12 @@ receiver.app.get('/:channel/:from?/:to?', (req, res) => {
       fromDate = Date.now() - 60 * 60 * 24 * 1000; // one day by default
     }
 
-    // console.log("history (" +  new Date().toLocaleString() + ") from " + fromDate + "(" +  new Date(fromDate).toLocaleString() + ")" + " to " + toDate + "(" +  new Date(toDate).toLocaleString() + ")")
-
     db.getMessages(req.params.channel, fromDate, toDate, (messages) => {
       res.render('history.html', {
         channel: req.params.channel,
         token: req.query.token,
-        messages, avatars,
+        messages,
+        avatars,
         start_date: fromDate,
         end_date: toDate,
       });
@@ -154,14 +156,14 @@ app.message(async ({ message }) => {
 
   // Change <@ID> to something relevant
   let messageHTML = message.text.replace(/<@[^>]*>/g, (x) => {
-    x = x.replace('<@', '').replace('>', '');
-    return `<a target='_blank' href='${teamUrl}${avatarsId[x]}'>@${avatarsId[x]}</a>`;
+    const i = x.replace('<@', '').replace('>', '');
+    return `<a target='_blank' href='${teamUrl}${avatarsId[i]}'>@${avatarsId[i]}</a>`;
   });
 
   // Change <#C178PKDCY> to something relevant
   messageHTML = messageHTML.replace(/<#[^>]*>/g, (x) => {
-    x = x.replace('<#', '').replace('>', '');
-    return `<a target='_blank' href='${channelUrl}${channelsId[x]}'>#${channelsId[x]}</a>`;
+    const i = x.replace('<#', '').replace('>', '');
+    return `<a target='_blank' href='${channelUrl}${channelsId[i]}'>#${channelsId[i]}</a>`;
   });
 
   // Change <links> to something relevant
@@ -222,13 +224,13 @@ app.command(config.get('slack').command_search_command, async ({ command, ack, r
     const response = { text: `🔎 Top ${Math.min(results.length, maxResults)} results for '${searchText}'${maxResults < results.length ? ` (<${url}|see all>)` : ` (<${url}|see in the browser>)`} :`, attachments: [] };
 
     for (let i = 0; i < Math.min(results.length, maxResults); i += 1) {
-      const h_text = _str.code(results[i].message, wordsArray);
+      const hText = strHelper.code(results[i].message, wordsArray);
 
       response.attachments.push({
-        fallback: `${results[i].poster} : ${h_text}`,
+        fallback: `${results[i].poster} : ${hText}`,
         color,
         author_name: `${results[i].poster} @ ${new Date(results[i].timestamp).toLocaleString()}`,
-        text: h_text,
+        text: hText,
         mrkdwn_in: ['text'],
       });
     }
@@ -250,8 +252,8 @@ app.command(config.get('slack').command_stats_command, async ({ command, ack, re
     text += '------------------------------------------------------------------------------\n';
 
     for (const p in results) {
-      if (p == 'special_timestamp') { continue; }
-      text += `| ${_str.pad(' ', 18, p)} | ${_str.pad(' ', 34, `${results[p].word} (${results[p].word_count} occurences)`)} | ${_str.pad(' ', 19, `${results[p].total} (${parseInt(results[p].average)}/d.avg)`)} |\n`;
+      if (p === 'special_timestamp') { continue; }
+      text += `| ${strHelper.pad(' ', 18, p)} | ${strHelper.pad(' ', 34, `${results[p].word} (${results[p].word_count} occurences)`)} | ${strHelper.pad(' ', 19, `${results[p].total} (${parseInt(results[p].average)}/d.avg)`)} |\n`;
     }
 
     text += '------------------------------------------------------------------------------```';
