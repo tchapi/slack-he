@@ -1,8 +1,6 @@
 {
   "host": "http://127.0.0.1:3975/",
   "slack" : {
-    "command_stats_token" : "ToKeN",
-    "command_search_token": "ToKeN",
     "command_endpoint" : "/command",
     "command_search_command" : "/history",
     "command_stats_command" : "/stats",

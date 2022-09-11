@@ -24,7 +24,6 @@
     "eslint": "^7.32.0 || ^8.2.0",
     "express": "^4.17.2",
     "markdown-it": "^12.3.2",
-    "node-fetch": "^2.6.7",
     "nunjucks": "^3.2.3",
     "nunjucks-date": "^1.5.0",
     "serve-static": "^1.15.0",

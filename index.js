@@ -1,8 +1,9 @@
+/* eslint-disable no-console */
+/* eslint-disable no-restricted-syntax */
 const serveStatic = require('serve-static');
 const bodyParser = require('body-parser');
 const nunjucks = require('nunjucks');
 const nunjucksDate = require('nunjucks-date');
-const fetch = require('node-fetch');
 const { App, ExpressReceiver } = require('@slack/bolt');
 const dotenv = require('dotenv');
 const md = require('markdown-it')({
@@ -62,15 +63,12 @@ const avatars = [];
 const avatarsId = [];
 
 const teamUrl = `https://${process.env.SLACK_DOMAIN}.slack.com/team/`;
-const usersUrl = `https://slack.com/api/users.list?token=${config.get('slack').api_token}`;
 const getUsers = async () => {
   try {
-    const response = await fetch(usersUrl);
-    const usersList = await response.json();
-    /// if ok: false throw "error"
-    for (const user in usersList.members) {
-      avatars[usersList.members[user].name] = usersList.members[user].profile.image_48;
-      avatarsId[usersList.members[user].id] = usersList.members[user].name;
+    const usersList = await app.client.users.list();
+    for (const user of usersList.members) {
+      avatars[user.name] = user.profile.image_48;
+      avatarsId[user.id] = user.name;
     }
   } catch (error) {
     console.log(error);
@@ -81,14 +79,11 @@ const getUsers = async () => {
 const channelsId = [];
 
 const channelUrl = `https://${process.env.SLACK_DOMAIN}.slack.com/messages/`;
-const channelsUrl = `https://slack.com/api/channels.list?token=${config.get('slack').api_token}`;
 const getChannels = async () => {
   try {
-    const response = await fetch(channelsUrl);
-    const channelsList = await response.json();
-
-    for (const channel in channelsList.channels) {
-      channelsId[channelsList.channels[channel].id] = channelsList.channels[channel].name;
+    const channelsList = await app.client.conversations.list();
+    for (const channel of channelsList.channels) {
+      channelsId[channel.id] = channel.name;
     }
   } catch (error) {
     console.log(error);
@@ -97,7 +92,7 @@ const getChannels = async () => {
 
 // This is the search results endpoint
 receiver.app.get('/search/:channel/:terms', (req, res) => {
-  if (req.query.token !== process.env.PAGES_TOKEN) {
+  if (req.query.token !== process.env.ACCESS_TOKEN) {
     console.log('Bad token :', req.query.token);
     res.status(403).end();
   } else {
@@ -118,7 +113,7 @@ receiver.app.get('/search/:channel/:terms', (req, res) => {
 
 // This is the full history endpoint
 receiver.app.get('/:channel/:from?/:to?', (req, res) => {
-  if (req.query.token !== process.env.PAGES_TOKEN) {
+  if (req.query.token !== process.env.ACCESS_TOKEN) {
     console.log('Bad token :', req.query.token);
     res.status(403).end();
   } else {
@@ -154,6 +149,15 @@ app.message(async ({ message }) => {
     return;
   }
 
+  if (message.subtype) {
+    // message_deleted, message_changed, etc ...
+    return;
+  }
+
+  // Keep the history even if we don't know the channel name
+  const channelName = channelsId[message.channel] ?? message.channel;
+  const posterName = avatarsId[poster] ?? poster;
+
   // Change <@ID> to something relevant
   let messageHTML = message.text.replace(/<@[^>]*>/g, (x) => {
     const i = x.replace('<@', '').replace('>', '');
@@ -176,7 +180,7 @@ app.message(async ({ message }) => {
   messageHTML = md.render(messageHTML);
 
   // Store message, and that's all
-  db.insertMessage(poster, Date.now(), messageHTML, message.text, message.channel_name);
+  db.insertMessage(posterName, Date.now(), messageHTML, message.text, channelName);
 });
 
 app.command(config.get('slack').command_search_command, async ({ command, ack, respond }) => {
@@ -187,7 +191,7 @@ app.command(config.get('slack').command_search_command, async ({ command, ack, r
 
   // If no search term is provided, we just output the url of the history page
   if (searchText === '') {
-    const historyUrl = `${config.get('host')}/${channel}?token=${process.env.PAGES_TOKEN}`;
+    const historyUrl = `${config.get('host')}/${channel}?token=${process.env.ACCESS_TOKEN}`;
 
     await respond(`You can find the whole channel history <${historyUrl}|here>.`);
     return;
@@ -220,7 +224,7 @@ app.command(config.get('slack').command_search_command, async ({ command, ack, r
     const { color } = config.get('slack').search;
 
     const wordsArray = searchText.split(' ');
-    const url = `${config.get('host')}/search/${channel}/${encodeURIComponent(searchText)}?token=${config.get('slack').pages_token}`;
+    const url = `${config.get('host')}/search/${channel}/${encodeURIComponent(searchText)}?token=${process.env.ACCESS_TOKEN}`;
     const response = { text: `🔎 Top ${Math.min(results.length, maxResults)} results for '${searchText}'${maxResults < results.length ? ` (<${url}|see all>)` : ` (<${url}|see in the browser>)`} :`, attachments: [] };
 
     for (let i = 0; i < Math.min(results.length, maxResults); i += 1) {
@@ -242,7 +246,7 @@ app.command(config.get('slack').command_search_command, async ({ command, ack, r
 app.command(config.get('slack').command_stats_command, async ({ command, ack, respond }) => {
   await ack();
 
-  const channel = command.channel_name; // ????
+  const channel = command.channel_name;
 
   // We need to output stats ;)
   db.stat(channel, async (results) => {
@@ -267,7 +271,7 @@ app.command(config.get('slack').command_stats_command, async ({ command, ack, re
   const port = process.env.PORT || 4000;
   await app.start(port);
 
-  console.log(`⚡️ Starting Slack HE for domain ${process.env.SLACK_DOMAIN}.slack.com at http://${config.get('host')}:${port}`);
+  console.log(`⚡️ Starting Slack HE for domain ${process.env.SLACK_DOMAIN}.slack.com at ${config.get('host')}`);
   console.log('\n ** Slack History Extended (HE) **');
   console.log(' A bot that stores all messages and');
   console.log(' enables full deep search via in-app');
@@ -278,4 +282,6 @@ app.command(config.get('slack').command_stats_command, async ({ command, ack, re
 
   console.log('📡 Retrieving channels ...');
   await getChannels();
+
+  console.log('Done. Listening...');
 })();
