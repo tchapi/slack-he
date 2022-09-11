@@ -33,6 +33,11 @@
         src={{ shared_path }}/config.json
         dest={{ release_path }}/config.json
         state=link
+    - name: Link .env file
+      file:
+        src={{ shared_path }}/.env
+        dest={{ release_path }}/.env
+        state=link
     - name: Link db.sqlite file
       file:
         src={{ shared_path }}/db.sqlite
