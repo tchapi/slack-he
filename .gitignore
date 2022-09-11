@@ -39,3 +39,5 @@ test_curl.sh
 
 deploy/vars.yml
 deploy/config.prod.*
+deploy/.env.prod
+
