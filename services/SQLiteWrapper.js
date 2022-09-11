@@ -113,8 +113,8 @@ p.search = function(text, channel, poster, return_html, callback) {
 
 p.getMessages = function(channel, from_date, to_date, callback) {
 
-  var sql = "SELECT * FROM data WHERE channel = $channel AND timestamp > $from AND timestamp < $to;"
-  var params = { $channel: channel, $from: from_date, $to: to_date };
+  const sql = 'SELECT * FROM data WHERE channel = $channel AND timestamp > $from AND timestamp < $to;'
+  const params = { $channel: channel, $from: from_date, $to: to_date };
 
   this.db.serialize((function() {
 
@@ -129,10 +129,10 @@ p.getMessages = function(channel, from_date, to_date, callback) {
 
 p.stat = function(channel, callback) {
 
-  var sql_timestamp = "SELECT MIN(timestamp) AS min_t FROM data WHERE channel = $channel;";
-  var sql_total = "SELECT poster, AVG(msg_count) AS average, SUM(msg_count) AS total FROM (SELECT poster, timestamp, COUNT(*) AS msg_count FROM data WHERE channel = $channel GROUP BY timestamp/(1000*60*60*24), poster) a GROUP BY poster;"
-  var sql_words = "SELECT word, poster, MAX(count) as word_count FROM stats WHERE channel = $channel GROUP BY poster;";
-  var params = { $channel: channel };
+  const sql_timestamp = 'SELECT MIN(timestamp) AS min_t FROM data WHERE channel = $channel;';
+  const sql_total = "SELECT poster, AVG(msg_count) AS average, SUM(msg_count) AS total FROM (SELECT poster, timestamp, COUNT(*) AS msg_count FROM data WHERE channel = $channel GROUP BY timestamp/(1000*60*60*24), poster) a GROUP BY poster;"
+  const sql_words = "SELECT word, poster, MAX(count) as word_count FROM stats WHERE channel = $channel GROUP BY poster;";
+  const params = { $channel: channel };
 
   this.db.serialize((function() {
 
@@ -144,14 +144,22 @@ p.stat = function(channel, callback) {
         }
     }, (function(err, nb) {
       this.db.each(sql_total, params, function(err, row) {
-          if (row && results[row.poster]) {
-            results[row.poster].total = row.total;
-            results[row.poster].average = row.average;
+          if (err) {
+            console.error(err)
+          } else {
+            if (row && results[row.poster]) {
+              results[row.poster].total = row.total;
+              results[row.poster].average = row.average;
+            }
           }
       }, (function(err, nb) {
         this.db.get(sql_timestamp, params, function(err, row) {
-          results['special_timestamp'] = row.min_t;
-          callback(results)
+          if (err) {
+            console.error(err)
+          } else {
+            results['special_timestamp'] = row.min_t;
+            callback(results)
+          }
         });
       }).bind(this));
     }).bind(this));

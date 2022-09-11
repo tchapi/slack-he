@@ -1,16 +1,9 @@
 {
-  "port" : 3975,
   "host": "http://127.0.0.1:3975/",
   "slack" : {
-    "api_token" : "ToKeN",
-    "pages_token" : "ToKeN",
-    "payload_token" : "ToKeN",
-    "command_stats_token" : "ToKeN",
-    "command_search_token": "ToKeN",
     "command_endpoint" : "/command",
     "command_search_command" : "/history",
     "command_stats_command" : "/stats",
-    "domain" : "mydomain",
     "search" : {
       "limit": 5,
       "color": "#36a64f"

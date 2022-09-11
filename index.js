@@ -1,328 +1,287 @@
-var express = require('express')
-var bodyParser = require('body-parser')
-var nunjucks = require('nunjucks')
-var nunjucksDate = require('nunjucks-date');
-
-var request = require('request')
-
-var md = require('markdown-it')({
+/* eslint-disable no-console */
+/* eslint-disable no-restricted-syntax */
+const serveStatic = require('serve-static');
+const bodyParser = require('body-parser');
+const nunjucks = require('nunjucks');
+const nunjucksDate = require('nunjucks-date');
+const { App, ExpressReceiver } = require('@slack/bolt');
+const dotenv = require('dotenv');
+const md = require('markdown-it')({
   html: true,
   linkify: true,
-  typographer: true
+  typographer: true,
+});
+const CONFIG = require('./services/ConfigParser');
+const StringHelper = require('./services/StringHelper');
+const SQLiteWrapper = require('./services/SQLiteWrapper');
+
+dotenv.config();
+
+if (!process.env.SLACK_BOT_TOKEN
+    || !process.env.SLACK_SIGNING_SECRET
+    || !process.env.ACCESS_TOKEN) {
+  console.error('Error: You must provide a SLACK_BOT_TOKEN, a SLACK_SIGNING_SECRET and an ACCESS_TOKEN in your .env file.');
+  process.exit(1);
+}
+
+console.log('🛠  Config read from .env file');
+
+const receiver = new ExpressReceiver({
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
 });
 
-var app = express()
+const app = new App({
+  token: process.env.SLACK_BOT_TOKEN,
+  receiver,
+});
 
-// Add string helper module
-var StringHelper = require('./services/StringHelper')
-var _str = new StringHelper()
-
-// Add config module
-var CONFIG = require('./services/ConfigParser')
-var config = new CONFIG()
-
-// Add SQLite Wrapper
-var SQLiteWrapper = require('./services/SQLiteWrapper')
-var db = new SQLiteWrapper({"db": config.get("db"), "stopwords": config.get("stopwords")})
-
-// parse application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({ extended: false }))
-
-// parse application/json
-app.use(bodyParser.json())
+receiver.app.use(bodyParser.urlencoded({ extended: false }));
+receiver.app.use(bodyParser.json());
 
 // static files
-app.use('/static', express.static(__dirname + '/public'))
+receiver.app.use('/static', serveStatic(`${__dirname}/public`));
 
-// templating 
-var env = nunjucks.configure('views', {
-    autoescape: false,
-    express: app
-})
+// templating
+const nunjucksEnv = nunjucks.configure('views', {
+  autoescape: false,
+  express: receiver.app,
+});
 nunjucksDate.setDefaultFormat('MMMM Do YYYY, HH:mm:ss');
-nunjucksDate.install(env);
+nunjucksDate.install(nunjucksEnv);
+
+// Add string helper module
+const strHelper = new StringHelper();
+
+// Add config module
+const config = new CONFIG();
+
+// Add SQLite Wrapper
+const db = new SQLiteWrapper({ db: config.get('db'), stopwords: config.get('stopwords') });
 
 // Let's get the users so we can store / update their avatars
-var avatars = [];
-var avatars_id = [];
-var team_url = "https://" + config.get('slack').domain + ".slack.com/team/";
-var users_url = "https://slack.com/api/users.list?token=" + config.get('slack').api_token
+const avatars = [];
+const avatarsId = [];
 
-request(users_url, function (error, response, body) {
-  if (!error && response.statusCode == 200) {
-    const users_list = JSON.parse(body);
-    for (var user in users_list.members) {
-      avatars[users_list.members[user].name] = users_list.members[user].profile.image_48;
-      avatars_id[users_list.members[user].id] = users_list.members[user].name;
+const teamUrl = `https://${process.env.SLACK_DOMAIN}.slack.com/team/`;
+const getUsers = async () => {
+  try {
+    const usersList = await app.client.users.list();
+    for (const user of usersList.members) {
+      avatars[user.name] = user.profile.image_48;
+      avatarsId[user.id] = user.name;
     }
-  } else {
-    console.log("Got an error: ", error, ", status code: ", response.statusCode);
+  } catch (error) {
+    console.log(error);
   }
-});
+};
 
 // Idem for channels
-var channels_id = [];
-var channel_url = "https://" + config.get('slack').domain + ".slack.com/messages/";
-var channels_url = "https://slack.com/api/channels.list?token=" + config.get('slack').api_token
+const channelsId = [];
 
-request(channels_url, function (error, response, body) {
-  if (!error && response.statusCode == 200) {
-    const channels_list = JSON.parse(body);
-    for (var channel in channels_list.channels) {
-      channels_id[channels_list.channels[channel].id] = channels_list.channels[channel].name;
+const channelUrl = `https://${process.env.SLACK_DOMAIN}.slack.com/messages/`;
+const getChannels = async () => {
+  try {
+    const channelsList = await app.client.conversations.list();
+    for (const channel of channelsList.channels) {
+      channelsId[channel.id] = channel.name;
     }
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+// This is the search results endpoint
+receiver.app.get('/search/:channel/:terms', (req, res) => {
+  if (req.query.token !== process.env.ACCESS_TOKEN) {
+    console.log('Bad token :', req.query.token);
+    res.status(403).end();
   } else {
-    console.log("Got an error: ", error, ", status code: ", response.statusCode);
+    // Search
+    db.search(req.params.terms, req.params.channel, null, true, (results) => {
+      const wordsArray = req.params.terms.split(' ');
+      const highlightedResults = [];
+      for (let i = 0; i < results.length; i += 1) {
+        highlightedResults[i] = results[i];
+        highlightedResults[i].message = strHelper.highlight(results[i].message, wordsArray);
+      }
+      res.render('search.html', {
+        channel: req.params.channel, terms: req.params.terms, avatars, highlightedResults,
+      });
+    });
   }
 });
 
-// This is the search results endpoint
-app.get('/search/:channel/:terms',function(req,res) {
-
-    if (req.query.token != config.get('slack').pages_token) {
-
-        console.log("Bad token :", req.query.token)
-        res.status(403).end()
-
-    } else {
-
-        // Search
-        db.search(req.params.terms, req.params.channel, null, true, function(results) {
-
-          var words_array = req.params.terms.split(' ');
-          for (var i = 0; i < results.length; i++) {
-            results[i].message = _str.highlight(results[i].message, words_array)
-          }
-          res.render('search.html', { "channel": req.params.channel, "terms": req.params.terms, avatars: avatars, "results": results })
-        })
-    }
-
-})
-
 // This is the full history endpoint
-app.get('/:channel/:from?/:to?',function(req,res) {
+receiver.app.get('/:channel/:from?/:to?', (req, res) => {
+  if (req.query.token !== process.env.ACCESS_TOKEN) {
+    console.log('Bad token :', req.query.token);
+    res.status(403).end();
+  } else {
+    // All messages, check dates
 
-    if (req.query.token != config.get('slack').pages_token) {
-
-        console.log("Bad token :", req.query.token)
-        res.status(403).end()
-
-    } else {
-
-        // All messages, check dates 
-
-        var to_date = Date.parse(req.params.to);
-        if (isNaN(to_date) || to_date > Date.now()) {
-          to_date = Date.now() + 1 * 1000  // a bit ahead
-        }
-        var from_date = Date.parse(req.params.from);
-        if (isNaN(from_date)) {
-          to_date = Date.now()
-          from_date = Date.now() - 60 * 60 * 24 * 1000; // one day by default
-        }
-
-        //console.log("history (" +  new Date().toLocaleString() + ") from " + from_date + "(" +  new Date(from_date).toLocaleString() + ")" + " to " + to_date + "(" +  new Date(to_date).toLocaleString() + ")")
-
-        db.getMessages(req.params.channel, from_date, to_date, function(messages) {
-          res.render('history.html', { "channel": req.params.channel, "token": req.query.token, "messages": messages, avatars: avatars, "start_date": from_date, "end_date": to_date })
-        })
+    let toDate = Date.parse(req.params.to);
+    if (Number.isNaN(toDate) || toDate > Date.now()) {
+      toDate = Date.now() + 1 * 1000; // a bit ahead
+    }
+    let fromDate = Date.parse(req.params.from);
+    if (Number.isNaN(fromDate)) {
+      toDate = Date.now();
+      fromDate = Date.now() - 60 * 60 * 24 * 1000; // one day by default
     }
 
-})
+    db.getMessages(req.params.channel, fromDate, toDate, (messages) => {
+      res.render('history.html', {
+        channel: req.params.channel,
+        token: req.query.token,
+        messages,
+        avatars,
+        start_date: fromDate,
+        end_date: toDate,
+      });
+    });
+  }
+});
 
-/* That is the endpoint Slack posts to 
-   for all incoming messages
-*/
-app.post('/',function(req,res) {
+app.message(async ({ message }) => {
+  const poster = message.user;
 
+  if (poster === 'USLACKBOT') { // Typical, for a bot.
+    return;
+  }
+
+  if (message.subtype) {
+    // message_deleted, message_changed, etc ...
+    return;
+  }
+
+  // Keep the history even if we don't know the channel name
+  const channelName = channelsId[message.channel] ?? message.channel;
+  const posterName = avatarsId[poster] ?? poster;
+
+  // Change <@ID> to something relevant
+  let messageHTML = message.text.replace(/<@[^>]*>/g, (x) => {
+    const i = x.replace('<@', '').replace('>', '');
+    return `<a target='_blank' href='${teamUrl}${avatarsId[i]}'>@${avatarsId[i]}</a>`;
+  });
+
+  // Change <#C178PKDCY> to something relevant
+  messageHTML = messageHTML.replace(/<#[^>]*>/g, (x) => {
+    const i = x.replace('<#', '').replace('>', '');
+    return `<a target='_blank' href='${channelUrl}${channelsId[i]}'>#${channelsId[i]}</a>`;
+  });
+
+  // Change <links> to something relevant
+  messageHTML = messageHTML.replace(/<http[^>]*>/g, (x) => {
+    const link = x.replace('<', '').replace('>', '');
+    return `<a target='_blank' href='${link}'>${link}</a>`;
+  });
+
+  // And then markdown
+  messageHTML = md.render(messageHTML);
+
+  // Store message, and that's all
+  db.insertMessage(posterName, Date.now(), messageHTML, message.text, channelName);
+});
+
+app.command(config.get('slack').command_search_command, async ({ command, ack, respond }) => {
+  await ack();
+
+  const searchText = command.text;
+  const channel = command.channel_name;
+
+  // If no search term is provided, we just output the url of the history page
+  if (searchText === '') {
+    const historyUrl = `${config.get('host')}/${channel}?token=${process.env.ACCESS_TOKEN}`;
+
+    await respond(`You can find the whole channel history <${historyUrl}|here>.`);
+    return;
+  }
+
+  // We need to search
+  db.search(searchText, channel, null, false, async (results) => {
+    // We format the results
     /*
-
-      token=TEST
-      team_id=T0001
-      team_domain=example
-      channel_id=C2147483705
-      channel_name=test
-      timestamp=1355517523.000005
-      user_id=U2147483697
-      user_name=Steve
-      text=googlebot: What is the air-speed velocity of an unladen swallow?
-      trigger_word=googlebot:
-
-    */
-
-    if (req.body.token != config.get('slack').payload_token) {
-
-        console.log("Bad token :", req.body.token)
-        res.status(403).end()
-
-    } else if (req.body.user_id == 'USLACKBOT') { // Typical, for a bot.
-
-        res.status(204).end() // No-Content
-
-    } else if (req.body.text.substr(0,config.get('slack').command_search_command.length) == config.get('slack').command_search_command &&
-               req.body.text.substr(0,config.get('slack').command_stats_command.length) == config.get('slack').command_stats_command ) { // We don't want to store commands
-
-        res.status(204).end() // No-Content
-
-    } else {
-
-        // Change <@ID> to something relevant
-        var messageHTML = req.body.text.replace(/<@[^>]*>/g, function users_to_name(x){
-          x = x.replace("<@", "").replace(">", "")
-          return "<a target='_blank' href='" + team_url + avatars_id[x] + "'>@" + avatars_id[x] + "</a>";
-        });
-
-        // Change <#C178PKDCY> to something relevant
-        messageHTML = messageHTML.replace(/<#[^>]*>/g, function channels_to_name(x){
-          x = x.replace("<#", "").replace(">", "")
-          return "<a target='_blank' href='" + channel_url + channels_id[x] + "'>#" + channels_id[x] + "</a>";
-        });
-
-        // Change <links> to something relevant
-        messageHTML = messageHTML.replace(/<http[^>]*>/g, function urls_to_urls(x){
-          x = x.replace("<", "").replace(">", "")
-          return "<a target='_blank' href='" + x + "'>" + x + "</a>";
-        });
-
-        // And then markdown
-        messageHTML = md.render(messageHTML);
-
-        // Store message, and that's all
-        db.insertMessage(req.body.user_name, Date.now(), messageHTML, req.body.text, req.body.channel_name)
-        res.status(200).end() // OK
-
-    }
-})
-
-/* That is the command endpoint
-*/
-app.post(config.get('slack').command_endpoint,function(req,res) {
-
-    /*
-
-      token=TEST
-      team_id=T0001
-      team_domain=example
-      channel_id=C2147483705
-      channel_name=test
-      user_id=U2147483697
-      user_name=Steve
-      command=/weather
-      text=94070
-      response_url=https://hooks.slack.com/commands/1234/5678
-
-    */
-
-    if (req.body.token != config.get('slack').command_stats_token && req.body.token != config.get('slack').command_search_token) {
-
-        console.log("Bad token :", req.body.token)
-        res.status(403).end()
-
-    } else if (req.body.user_id == 'USLACKBOT') { // Typical, for a bot.
-
-        res.status(204).end() // No-Content
-
-    } else if (req.body.command == config.get('slack').command_search_command){
-
-        var search_text = req.body.text
-        var channel = req.body.channel_name
-
-        // If no search term is provided, we just output the url of the history page
-        if (search_text == "") {
-          var history_url = config.get('host') + "/" + channel + "?token=" + config.get('slack').pages_token
-          res.json({ "text": "You can find the whole channel history <" + history_url + "|here>."}).end()
-          return;
+        {
+          "text": "🔎 Your search results for 'test' :",
+          "attachments": [
+              {
+                  "fallback": "Required plain-text summary of the attachment.",
+                  "color": "#36a64f",
+                  "author_name": "Bobby Tables @ 24 jan. 2016 20:35",
+                  "author_icon": "http://image.url/",
+                  "text": "Optional text that appears within the attachment"
+              }
+            ]
         }
+      */
 
-        // We need to search
-        db.search(search_text, channel, null, false, function(results) {
-
-          // We format the results
-          /*
-            {
-              "text": "🔎 Your search results for 'test' :",
-              "attachments": [
-                  {
-                      "fallback": "Required plain-text summary of the attachment.",
-                      "color": "#36a64f",
-                      "author_name": "Bobby Tables @ 24 jan. 2016 20:35",
-                      "author_icon": "http://image.url/",
-                      "text": "Optional text that appears within the attachment"
-                  } 
-                ]
-            }
-          */
-
-          if (results.length == 0) {
-            res.json({ "text": "Woops, no results for '" + search_text + "'"}).end()
-            return;
-          }
-
-          var max_results = config.get('slack').search.limit
-          var color = config.get('slack').search.color
-          
-          var words_array = search_text.split(' ');
-          var url = config.get('host') + "/search/" + channel + "/" + encodeURIComponent(search_text) + "?token=" + config.get('slack').pages_token
-          var response = { "text": "🔎 Top " + Math.min(results.length, max_results) + " results for '" + search_text + "'" + (max_results<results.length?" (<"+ url +"|see all>)":" (<"+ url +"|see in the browser>)") + " :", "attachments": [] }
-
-          for (var i = 0; i < Math.min(results.length, max_results); i++) {
-
-            var h_text = _str.code(results[i].message, words_array)
-
-            response["attachments"].push({
-                      "fallback": results[i].poster + " : " + h_text,
-                      "color": color,
-                      "author_name": results[i].poster + " @ " + new Date(results[i].timestamp).toLocaleString(),
-                      "text": h_text,
-                      "mrkdwn_in": ["text"]
-                  });
-          }
-
-          res.json(response).end() // OK
-        })
-
-    } else if (req.body.command == config.get('slack').command_stats_command){
-
-        var channel = req.body.channel_name
-
-        // We need to output stats ;)
-        db.stat(channel, function(results) {
-
-          var text = "Word stats since *" + new Date(results['special_timestamp']).toLocaleString() + "* :";
-
-          text += "```| User              | Most common word                  | Messages total     |\n";
-          text += "------------------------------------------------------------------------------\n";
-
-          for (var p in results) {
-            if (p =='special_timestamp') { continue; }
-            text += "| " + _str.pad(' ', 18, p) + " | " + _str.pad(' ', 34, results[p].word + " (" + results[p].word_count + " occurences)") + " | " + _str.pad(' ', 19, results[p].total + " (" + parseInt(results[p].average) + "/d.avg)") + " |\n";
-          }
-          
-          text += "------------------------------------------------------------------------------```";
-
-          res.json({ "text": text}).end() // OK
-        
-        })
-
-    } else {
-
-        console.log("Bad command :", req.body.command)
-        res.status(404).end()
+    if (results.length === 0) {
+      await respond(`Woops, no results for '${searchText}'`);
+      return;
     }
-})
 
+    const maxResults = config.get('slack').search.limit;
+    const { color } = config.get('slack').search;
+
+    const wordsArray = searchText.split(' ');
+    const url = `${config.get('host')}/search/${channel}/${encodeURIComponent(searchText)}?token=${process.env.ACCESS_TOKEN}`;
+    const response = { text: `🔎 Top ${Math.min(results.length, maxResults)} results for '${searchText}'${maxResults < results.length ? ` (<${url}|see all>)` : ` (<${url}|see in the browser>)`} :`, attachments: [] };
+
+    for (let i = 0; i < Math.min(results.length, maxResults); i += 1) {
+      const hText = strHelper.code(results[i].message, wordsArray);
+
+      response.attachments.push({
+        fallback: `${results[i].poster} : ${hText}`,
+        color,
+        author_name: `${results[i].poster} @ ${new Date(results[i].timestamp).toLocaleString()}`,
+        text: hText,
+        mrkdwn_in: ['text'],
+      });
+    }
+
+    await respond(response);
+  });
+});
+
+app.command(config.get('slack').command_stats_command, async ({ command, ack, respond }) => {
+  await ack();
+
+  const channel = command.channel_name;
+
+  // We need to output stats ;)
+  db.stat(channel, async (results) => {
+    let text = `Word stats since *${new Date(results.special_timestamp).toLocaleString()}* :`;
+
+    text += '```| User              | Most common word                  | Messages total     |\n';
+    text += '------------------------------------------------------------------------------\n';
+
+    for (const p in results) {
+      if (p === 'special_timestamp') { continue; }
+      text += `| ${strHelper.pad(' ', 18, p)} | ${strHelper.pad(' ', 34, `${results[p].word} (${results[p].word_count} occurences)`)} | ${strHelper.pad(' ', 19, `${results[p].total} (${parseInt(results[p].average)}/d.avg)`)} |\n`;
+    }
+
+    text += '------------------------------------------------------------------------------```';
+
+    await respond(text);
+  });
+});
 
 // Start application
-var server = app.listen(config.get("port"), function () {
+(async () => {
+  const port = process.env.PORT || 4000;
+  await app.start(port);
 
-  var host = server.address().address
-  var port = server.address().port
+  console.log(`⚡️ Starting Slack HE for domain ${process.env.SLACK_DOMAIN}.slack.com at ${config.get('host')}`);
+  console.log('\n ** Slack History Extended (HE) **');
+  console.log(' A bot that stores all messages and');
+  console.log(' enables full deep search via in-app');
+  console.log(' commands.\n');
 
-  console.log("\n ** Slack History Extended (HE) **")
-  console.log(" A bot that stores all messages and")
-  console.log(" enables full deep search via in-app")
-  console.log(" commands.\n")
+  console.log('👥 Retrieving users ...');
+  await getUsers();
 
-  console.log('Starting Slack HE for domain %s.slack.com at http://%s:%s', config.get("slack").domain, host, port)
+  console.log('📡 Retrieving channels ...');
+  await getChannels();
 
-})
+  console.log('Done. Listening...');
+})();
