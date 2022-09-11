@@ -43,8 +43,8 @@
         src={{ shared_path }}/db.sqlite
         dest={{ release_path }}/db.sqlite
         state=link
-    - name: Update npm
-      npm:
+    - name: Update dependencies
+      yarn:
         path={{ release_path }}
     - name: Stop the API via pm2
       shell: pm2 stop slack-he
