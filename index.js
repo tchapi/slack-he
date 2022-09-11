@@ -271,7 +271,7 @@ app.command(config.get('slack').command_stats_command, async ({ command, ack, re
   const port = process.env.PORT || 4000;
   await app.start(port);
 
-  console.log(`⚡️ Starting Slack HE for domain ${process.env.SLACK_DOMAIN}.slack.com at ${config.get('host')}`);
+  console.log(`⚡️ Starting Slack HE for domain ${process.env.SLACK_DOMAIN}.slack.com at ${config.get('host')} (port=${port})`);
   console.log('\n ** Slack History Extended (HE) **');
   console.log(' A bot that stores all messages and');
   console.log(' enables full deep search via in-app');
